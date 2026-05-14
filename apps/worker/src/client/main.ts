@@ -188,12 +188,38 @@ function showCompletion(profile: { displayName: string; pictureUrl?: string }, i
 
 function showError(message: string) {
   const container = document.getElementById('app')!;
+  const resetUrl = new URL(window.location.href);
+  resetUrl.searchParams.set('reset', '1');
   container.innerHTML = `
     <div class="card">
       <h2>エラー</h2>
       <p class="error">${escapeHtml(message)}</p>
+      <a class="add-friend-btn" href="${escapeHtml(resetUrl.toString())}">ログアウトする</a>
     </div>
   `;
+}
+
+function showResetDone() {
+  const container = document.getElementById('app')!;
+  container.innerHTML = `
+    <div class="card">
+      <h2>ログアウトしました</h2>
+      <p class="message">右上の × ボタンで画面を閉じ、もう一度LIFFを開き直してください。</p>
+      <button id="lh-close-btn" class="add-friend-btn" type="button">画面を閉じる</button>
+    </div>
+  `;
+  const btn = document.getElementById('lh-close-btn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      try {
+        if (typeof liff !== 'undefined' && typeof liff.closeWindow === 'function') {
+          liff.closeWindow();
+          return;
+        }
+      } catch { /* fall through */ }
+      try { window.close(); } catch { /* no-op */ }
+    });
+  }
 }
 
 // ─── Core Flow ──────────────────────────────────────────
@@ -447,6 +473,24 @@ async function initEventBooking(initialKind: 'detail' | 'history'): Promise<void
 
 async function main() {
   try {
+    // Escape hatch: ?reset=1 clears all LIFF/local cache and shows a
+    // close-window page (does NOT proceed to liff.init). Use when a revoked
+    // LINE access token leaves the SDK stuck "logged in" with an unusable
+    // token. Re-opening the LIFF without ?reset=1 then triggers a fresh
+    // OAuth flow.
+    if (new URLSearchParams(window.location.search).get('reset') === '1') {
+      try {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && (/^LIFF/i.test(k) || /^liff[-_]/i.test(k) || k === UUID_STORAGE_KEY)) {
+            localStorage.removeItem(k);
+          }
+        }
+      } catch { /* private mode etc. */ }
+      showResetDone();
+      return;
+    }
+
     await liff.init({ liffId: LIFF_ID });
 
     if (!liff.isLoggedIn()) {
