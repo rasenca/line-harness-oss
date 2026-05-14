@@ -83,6 +83,18 @@ export default function BookingHistory() {
           ))}
         </ul>
       )}
+      <button
+        type="button"
+        onClick={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.set('view', 'new');
+          window.location.href = url.toString();
+        }}
+        className="w-full py-3 rounded-xl text-white font-semibold mt-2"
+        style={{ background: '#06C755' }}
+      >
+        新規予約をする
+      </button>
       <p className="text-xs text-gray-400 text-center pt-2">
         変更・キャンセルはお店に LINE で直接ご連絡ください
       </p>
