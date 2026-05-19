@@ -309,6 +309,7 @@ export default function Sidebar() {
         )}
         <div className="px-6 py-4 space-y-3">
         <p className="text-xs text-gray-400">L Harness v{process.env.APP_VERSION || '0.0.0'}</p>
+        <p className="text-xs text-gray-400">rasenca-{process.env.GIT_HASH || 'unknown'}</p>
         <button
           onClick={() => {
             localStorage.removeItem('lh_api_key')
