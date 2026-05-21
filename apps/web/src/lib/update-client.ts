@@ -3,12 +3,12 @@ import type {
   CurrentVersion,
   ForkStatus,
   ReleaseEntry,
-} from '@line-harness/update-engine'
+} from '@line-harness/update-engine/pure'
 import {
   detectFork,
   findLatestUpgrade,
   compareSemver,
-} from '@line-harness/update-engine'
+} from '@line-harness/update-engine/pure'
 
 // Re-export so consumers can import all upgrade-related types from one place
 export type { Manifest, CurrentVersion, ForkStatus, ReleaseEntry }

@@ -48,6 +48,15 @@ function rewriteFile(path) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const here = dirname(fileURLToPath(import.meta.url));
   const packageRoot = join(here, '..');
-  rewriteFile(join(packageRoot, 'dist/index.mjs'));
-  rewriteFile(join(packageRoot, 'dist/index.cjs'));
+  for (const file of ['index.mjs', 'index.cjs', 'pure.mjs', 'pure.cjs']) {
+    const path = join(packageRoot, 'dist', file);
+    try {
+      rewriteFile(path);
+    } catch (error) {
+      if (file.startsWith('pure.')) {
+        continue;
+      }
+      throw error;
+    }
+  }
 }

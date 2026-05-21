@@ -8,6 +8,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
+    },
+    "./pure": {
+      "types": "./dist/pure.d.ts",
+      "import": "./dist/pure.mjs",
+      "require": "./dist/pure.cjs"
     }
   },
   "main": "./dist/index.cjs",
