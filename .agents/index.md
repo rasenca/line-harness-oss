@@ -48,3 +48,6 @@ rasenca/line-harness-oss (Public)          ← 我々のフォーク = origin（
 - [0001-adopt-bootstrap-playbook-in-rasenca-fork.md](decisions/0001-adopt-bootstrap-playbook-in-rasenca-fork.md) — playbook 流儀の採用＋フォークのトポロジー宣言（ACCEPTED）
 - [0002-fork-safety-no-upstream-writes.md](decisions/0002-fork-safety-no-upstream-writes.md) — フォーク安全規律：upstream へ push/PR しない（ACCEPTED）
 - [0003-inherited-shudesu-docs-triage.md](decisions/0003-inherited-shudesu-docs-triage.md) — 本家由来ドキュメントの棚卸し方針＝社内運用フォークとして扱う（ACCEPTED）
+- [0004-protect-main-branch.md](decisions/0004-protect-main-branch.md) — main を ruleset で保護（PR 必須・force push/削除禁止・admin bypass）（ACCEPTED）
+- [0005-deploy-operation-policy.md](decisions/0005-deploy-operation-policy.md) — デプロイ運用方針：将来 Rasenca 独自デプロイ・現時点は追従のみ dormant（ACCEPTED）
+- [0006-upstream-tracking-policy.md](decisions/0006-upstream-tracking-policy.md) — upstream 追従の運用方針（update-from-upstream 維持・PR 宛先明示化）（ACCEPTED）
