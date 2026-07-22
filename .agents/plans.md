@@ -16,16 +16,18 @@
 | P3 | Rasenca 独自デプロイ運用の方針（Q-003 / ADR-0005） | ✅ DONE | ADR-0005（将来やる・現状 dormant） |
 | P4 | 本家追従 update-from-upstream の運用確認・改修（Q-004 / ADR-0006） | ✅ DONE | ADR-0006・workflow に --repo 明示 |
 | P5 | （将来）Rasenca 独自デプロイの有効化（ADR-0005 の opt-in 手順を実施） | ⬜ 将来 | secrets/変数設定・wrangler 環境定義・リリース手順正典化 |
+| P6 | Upstream 由来 docs の設計意図を ADR 化（0007〜0017・全ドメイン） | ✅ DONE | .agents/decisions/0007-0017 |
+| P7 | 転記 ADR とコードの突合・留保解消（`sync-adrs`） | ⬜ NEXT | Q-005〜Q-008 の裏取り・ADR に `## Update` |
 
 ## 直近の意思決定（ADR）
 
-- ADR-0001〜0006 まで ACCEPTED。全件の要約は [index.md の decisions/ 節](index.md) を参照。
-- 直近: [ADR-0004](decisions/0004-protect-main-branch.md)（main 保護）/ [ADR-0005](decisions/0005-deploy-operation-policy.md)（デプロイ方針）/ [ADR-0006](decisions/0006-upstream-tracking-policy.md)（upstream 追従）。
+- ADR-0001〜0017 まで ACCEPTED。全件の要約は [index.md の decisions/ 節](index.md) を参照。
+- 0001〜0006 = フォーク運用の意思決定（Rasenca 発）。0007〜0017 = 本家由来 docs から転記した設計意図（要所は要コード裏取り）。
 
 ## 次アクション
 
-> P0〜P4 の立ち上げ・運用ハードニングは完了。以降はユーザ判断で着手する将来タスク。
+> P0〜P4 の立ち上げ・運用ハードニングと、P6 の upstream docs → ADR 転記は完了。
 
-1. （将来 P5）Rasenca 独自デプロイの有効化に着手する場合は [ADR-0005](decisions/0005-deploy-operation-policy.md) の opt-in 手順に従う（secrets はユーザーが登録）。
-2. 大きめの取り込み・実装マージ後は `sync-adrs` で ADR と現行の乖離をならす。
+1. **（P7・推奨）転記 ADR（0007〜0017）とコードの突合**。`sync-adrs` で Q-005〜Q-008 を裏取りし、乖離を各 ADR に `## Update (日付)` で反映（特に広告CV spec の実装有無・重複検出方式・トラフィックプールの実在）。
+2. （将来 P5）Rasenca 独自デプロイを有効化する場合は [ADR-0005](decisions/0005-deploy-operation-policy.md) の opt-in 手順に従う（secrets はユーザーが登録）。
 3. upstream 追従 PR（`chore: update from upstream`）が来たら diff を確認してマージ（自動マージしない）。

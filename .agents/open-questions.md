@@ -12,7 +12,10 @@
 
 | ID | 問い | 影響 | 状態 | メモ |
 |----|------|------|------|------|
-| （現在 OPEN なし） | | | | 立ち上げ〜運用ハードニング（P0〜P4）は解決済み。将来 P5（独自デプロイ有効化）着手時に新規論点が出たらここに追加 |
+| Q-005 | `docs/ad-conversion-spec.md`（広告CV返送）は本家向けの*提案仕様書*。Rasenca フォークのコードで実装済みか？ | ADR-0012 の広告返送記述が「現行の正」か「未実装の構想」か | OPEN | `sync-adrs`/grep で `sendAdConversions`・`ad_platforms`・`ad_conversion_logs` の実在確認 → ADR-0012 に `## Update` |
+| Q-006 | 友だち重複検出の実装方式は「picture_url トークン照合」（README主張）か「identity_key 複合キー」（docs）か | ADR-0012 の重複検知記述の正確性・不正検知の実挙動 | OPEN | 実装で確認して ADR-0012 を確定 |
+| Q-007 | マルチアカウント移行は「受動 UUID 再マッチ」のみか、能動的トラフィックプール（送信元ローテ）が実在するか（MCP `manage_traffic_pools` あり） | ADR-0010 の移行/BAN 対策記述の正確性 | OPEN | `traffic_pool` 系のコード/スキーマ確認 → ADR-0010 に反映 |
+| Q-008 | docs 内の記述揺れをコードで正す（CORS `*`/限定・`NEXT_PUBLIC_API_KEY` 可否・テーブル数 42/45・パッケージ名 `@line-harness/*`/`@line-crm/*`・reminder `offset_minutes` 符号・automation アクション 6/8 種） | ADR-0008/0009/0010/0011 の細部の正確性 | OPEN | `sync-adrs` で一括裏取り。stale な doc（22-Operations.md の CORS `*` 等）も是正候補 |
 
 ## ANSWERED（記録）
 
