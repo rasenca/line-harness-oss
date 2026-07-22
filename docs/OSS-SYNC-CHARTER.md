@@ -1,5 +1,9 @@
 # OSS 同期憲章 (OSS Sync Charter)
 
+> **⚠ これは upstream 本家 Shudesu の内部運用ドキュメントです（フォークで継承）。Rasenca フォークではこの手順を実行しません。**
+> Rasenca フォークの運用は [.agents/conventions.md](../.agents/conventions.md) / [ADR-0001](../.agents/decisions/0001-adopt-bootstrap-playbook-in-rasenca-fork.md) / [ADR-0003](../.agents/decisions/0003-inherited-shudesu-docs-triage.md) を参照。
+> なお本書での「upstream」は Shudesu の Private リポ (`Shudesu/line-harness`) を指す（Rasenca フォークの upstream = `Shudesu/line-harness-oss` とは別物）。
+
 > LINE Harness プロジェクトにおける Private ↔ OSS リポジトリの同期・運用ルール。
 > 全コントリビューター・AIエージェントはこの憲章に従うこと。
 

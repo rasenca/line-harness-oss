@@ -37,12 +37,14 @@ rasenca/line-harness-oss (Public)          ← 我々のフォーク = origin（
 
 ## docs/（.agents 外・一部は本家 Shudesu 由来）
 
-> 下記は**本家由来のドキュメントがフォークで継承されたもの**。Rasenca の正典ではない（読み替えは [ADR-0001](decisions/0001-adopt-bootstrap-playbook-in-rasenca-fork.md)）。
+> 下記は**本家由来のドキュメントがフォークで継承されたもの**。Rasenca の正典ではない。棚卸しと扱いの方針は [ADR-0003](decisions/0003-inherited-shudesu-docs-triage.md)（位置づけ = 社内運用フォーク）。
 
-- [../README.md](../README.md) — プロダクト概要（本家由来）
-- [../docs/OSS-SYNC-CHARTER.md](../docs/OSS-SYNC-CHARTER.md) — ⚠ 本家 Shudesu の Private↔OSS 同期憲章（Rasenca では該当手順を実行しない）
+- [../README.md](../README.md)（+翻訳 en/zh-CN/ko/es） — プロダクト概要。冒頭に「Rasenca 社内運用フォーク」バナーを追記済み
+- [../CONTRIBUTING.md](../CONTRIBUTING.md) / [../SECURITY.md](../SECURITY.md) — フォーク注記・報告経路を Rasenca 向けに整理済み
+- [../docs/OSS-SYNC-CHARTER.md](../docs/OSS-SYNC-CHARTER.md) / [../docs/OSS-SANDBOX-MERGE-GATE.md](../docs/OSS-SANDBOX-MERGE-GATE.md) — ⚠ 本家 Shudesu の内部運用ドキュメント（冒頭注記済み・Rasenca では実行しない）
 
 ## decisions/（ADR — 意思決定の履歴）
 
 - [0001-adopt-bootstrap-playbook-in-rasenca-fork.md](decisions/0001-adopt-bootstrap-playbook-in-rasenca-fork.md) — playbook 流儀の採用＋フォークのトポロジー宣言（ACCEPTED）
 - [0002-fork-safety-no-upstream-writes.md](decisions/0002-fork-safety-no-upstream-writes.md) — フォーク安全規律：upstream へ push/PR しない（ACCEPTED）
+- [0003-inherited-shudesu-docs-triage.md](decisions/0003-inherited-shudesu-docs-triage.md) — 本家由来ドキュメントの棚卸し方針＝社内運用フォークとして扱う（ACCEPTED）

@@ -1,5 +1,11 @@
 # Contributing to LINE Harness
 
+> **ℹ️ Rasenca 社内運用フォークについて:** 本リポジトリ `rasenca/line-harness-oss` は
+> `Shudesu/line-harness-oss` の **Rasenca 社内運用フォーク**です。以下は **upstream 本家 Shudesu
+> プロジェクトのメンテナ向けルール（原文のまま）**。本フォークは外部コントリビュートを受け付けず、
+> 変更は Rasenca 内部の PR フロー（[.agents/conventions.md](.agents/conventions.md)、**upstream へ push / PR しない**）に従います。
+> upstream 本家へのコントリビュートは [`Shudesu/line-harness-oss`](https://github.com/Shudesu/line-harness-oss) へ。
+
 LINE Harness is a public OSS LINE CRM. The project welcomes issues and pull
 requests, but it also protects real operators, LINE accounts, credentials, and
 customer data. This document is the maintainer rulebook for keeping the public

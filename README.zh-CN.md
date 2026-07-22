@@ -2,6 +2,8 @@
 
 # LINE Harness
 
+> **ℹ️ 这是 Rasenca 的内部运营 fork。** 上游为 [`Shudesu/line-harness-oss`](https://github.com/Shudesu/line-harness-oss)。变更通过 Rasenca 内部 PR 流程进行，绝不向上游 push 或提交 PR（参见 [.agents/](.agents/index.md)）。
+
 > ### **[在 LINE 上免费体验](https://shudesu.github.io/line-harness-oss/)** 👈
 
 完全开源的 LINE 官方账号 CRM。**专有 LINE CRM SaaS（月费 1-2 万日元）的免费替代方案**。
@@ -159,7 +161,7 @@ MIT License. 商用、修改、再分发自由。
 
 ## 贡献
 
-欢迎 Issue 和 PR。请向 `Shudesu/line-harness-oss`（本仓库）提交。
+本仓库（`rasenca/line-harness-oss`）是 Rasenca 的内部运营 fork，变更遵循 Rasenca 内部 PR 流程（见 [.agents/conventions.md](.agents/conventions.md)）。**关于产品的 Issue 和 PR，请提交到上游项目 [`Shudesu/line-harness-oss`](https://github.com/Shudesu/line-harness-oss)。**
 
 ---
 

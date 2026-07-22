@@ -2,6 +2,8 @@
 
 # LINE Harness
 
+> **ℹ️ 이것은 Rasenca 내부 운영 fork 입니다.** upstream 은 [`Shudesu/line-harness-oss`](https://github.com/Shudesu/line-harness-oss). 변경은 Rasenca 내부 PR 플로우로 진행하며, upstream 으로 push / PR 하지 않습니다 (참고: [.agents/](.agents/index.md)).
+
 > ### **[LINE에서 무료 체험하기](https://shudesu.github.io/line-harness-oss/)** 👈
 
 LINE 공식 계정의 완전 오픈소스 CRM. **유료 LINE CRM SaaS (월 1~2만 엔)의 무료 대체품**.
@@ -159,7 +161,7 @@ MIT License. 상업적 이용, 수정, 재배포 자유.
 
 ## 기여
 
-Issue / PR 환영. `Shudesu/line-harness-oss` (이 저장소) 로 보내주세요.
+이 저장소(`rasenca/line-harness-oss`)는 Rasenca 내부 운영 fork 이며, 변경은 Rasenca 내부 PR 플로우를 따릅니다(참고: [.agents/conventions.md](.agents/conventions.md)). **제품 관련 Issue / PR 은 upstream 프로젝트 [`Shudesu/line-harness-oss`](https://github.com/Shudesu/line-harness-oss) 로 보내주세요.**
 
 ---
 

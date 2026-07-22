@@ -2,6 +2,8 @@
 
 # LINE Harness
 
+> **ℹ️ これは Rasenca の社内運用フォークです。** upstream 本家は [`Shudesu/line-harness-oss`](https://github.com/Shudesu/line-harness-oss)。変更は Rasenca 内部の PR フローで行い、**upstream へ push / PR しません**（[.agents/](.agents/index.md)）。
+
 > ### **[LINE で無料体験する](https://shudesu.github.io/line-harness-oss/)** 👈
 
 LINE 公式アカウントの完全オープンソース CRM。**L社 / U社 の無料代替**。
@@ -159,7 +161,7 @@ MIT License. 商用利用・改変・再配布自由。
 
 ## コントリビュート
 
-Issue / PR 歓迎。OSS リポへの PR は `Shudesu/line-harness-oss` (このリポ) に投げてください。
+これは Rasenca の社内運用フォーク（`rasenca/line-harness-oss`）です。本フォークへの変更は Rasenca 内部の PR フローに従います（[.agents/conventions.md](.agents/conventions.md)）。**プロダクトへの Issue / PR は upstream 本家 [`Shudesu/line-harness-oss`](https://github.com/Shudesu/line-harness-oss) へお願いします。**
 
 ---
 
