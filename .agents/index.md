@@ -51,3 +51,17 @@ rasenca/line-harness-oss (Public)          ← 我々のフォーク = origin（
 - [0004-protect-main-branch.md](decisions/0004-protect-main-branch.md) — main を ruleset で保護（PR 必須・force push/削除禁止・admin bypass）（ACCEPTED）
 - [0005-deploy-operation-policy.md](decisions/0005-deploy-operation-policy.md) — デプロイ運用方針：将来 Rasenca 独自デプロイ・現時点は追従のみ dormant（ACCEPTED）
 - [0006-upstream-tracking-policy.md](decisions/0006-upstream-tracking-policy.md) — upstream 追従の運用方針（update-from-upstream 維持・PR 宛先明示化）（ACCEPTED）
+
+### 本家由来の設計意図を転記した ADR（0007〜0017・出典 docs・要所は要コード裏取り）
+
+- [0007-architecture-and-product-positioning.md](decisions/0007-architecture-and-product-positioning.md) — アーキテクチャ・実行基盤・プロダクト位置づけ（ACCEPTED）
+- [0008-data-model-and-schema-conventions.md](decisions/0008-data-model-and-schema-conventions.md) — データモデル・時刻/スキーマ規約・FK 方針（ACCEPTED）
+- [0009-auth-authz-and-api-security.md](decisions/0009-auth-authz-and-api-security.md) — 認証・認可・APIキー・セッション・CORS・公開エンドポイント（ACCEPTED）
+- [0010-delivery-scheduling-stealth-and-multi-account.md](decisions/0010-delivery-scheduling-stealth-and-multi-account.md) — 配信・スケジューリング・ステルス/BAN・マルチアカウント（ACCEPTED）
+- [0011-crm-friends-tags-scoring-automation.md](decisions/0011-crm-friends-tags-scoring-automation.md) — CRM（友だち/タグ/スコア/IF-THEN 自動化/チャット）（ACCEPTED）
+- [0012-measurement-tracked-links-and-attribution.md](decisions/0012-measurement-tracked-links-and-attribution.md) — 流入計測・トラッキングリンク・広告CV返送・アフィリ成果帰属（ACCEPTED）
+- [0013-integrations-webhooks-forms-richmenu.md](decisions/0013-integrations-webhooks-forms-richmenu.md) — 外部連携（LINE Login/Webhook・送受信Webhook・通知・Stripe・フォーム・リッチメニュー）（ACCEPTED）
+- [0014-sdk-api-mcp-and-ai-operation.md](decisions/0014-sdk-api-mcp-and-ai-operation.md) — SDK・API・MCP・AIネイティブ運用と安全委譲（ACCEPTED）
+- [0015-campaign-design-and-operations-philosophy.md](decisions/0015-campaign-design-and-operations-philosophy.md) — キャンペーン設計・運用思想（測れない配信は打たない）（ACCEPTED）
+- [0016-ci-deploy-release-workflow-design.md](decisions/0016-ci-deploy-release-workflow-design.md) — CI/デプロイ/リリースのワークフロー設計（ACCEPTED）
+- [0017-shudesu-repo-ops-reference.md](decisions/0017-shudesu-repo-ops-reference.md) — 【参考】Shudesu 本家のリポ運用・同期・リリースプロセス（ACCEPTED / shudesu-only-reference）
