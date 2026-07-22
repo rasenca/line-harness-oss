@@ -18,8 +18,16 @@ Older releases may receive guidance, but maintainers usually fix forward.
 Please do not report security vulnerabilities in public GitHub issues, public
 pull requests, screenshots, logs, or discussions.
 
-Use GitHub private vulnerability reporting when available, or contact the
-maintainer privately through the GitHub profile for `Shudesu`.
+This repository (`rasenca/line-harness-oss`) is a Rasenca-internal fork of the
+upstream project `Shudesu/line-harness-oss`.
+
+- **Vulnerabilities in the upstream code / product:** report to the upstream
+  project — GitHub private vulnerability reporting on
+  [`Shudesu/line-harness-oss`](https://github.com/Shudesu/line-harness-oss), or
+  the `Shudesu` GitHub profile.
+- **Issues specific to this fork or to Rasenca's own deployment:** use GitHub
+  private vulnerability reporting on
+  [`rasenca/line-harness-oss`](https://github.com/rasenca/line-harness-oss).
 
 When reporting, include:
 

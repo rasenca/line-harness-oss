@@ -1,5 +1,8 @@
 # OSS Sandbox Merge Gate
 
+> **⚠ これは upstream 本家 Shudesu の内部運用ドキュメントです（フォークで継承）。Rasenca フォークではこの手順を実行しません。**
+> Rasenca フォークの運用は [.agents/conventions.md](../.agents/conventions.md) / [ADR-0003](../.agents/decisions/0003-inherited-shudesu-docs-triage.md) を参照。
+
 OSS PR を merge する前に、利用者の本番環境を壊さないための運用ルールです。
 
 ## 目的

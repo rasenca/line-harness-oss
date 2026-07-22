@@ -2,6 +2,8 @@
 
 # LINE Harness
 
+> **ℹ️ Este es un fork de uso interno de Rasenca.** El upstream es [`Shudesu/line-harness-oss`](https://github.com/Shudesu/line-harness-oss). Los cambios pasan por el flujo de PR interno de Rasenca; nunca hacemos push ni abrimos PRs al upstream (ver [.agents/](.agents/index.md)).
+
 > ### **[Pruébalo gratis en LINE](https://shudesu.github.io/line-harness-oss/)** 👈
 
 CRM completamente open source para Cuentas Oficiales de LINE. **Alternativa gratuita a los SaaS de CRM para LINE propietarios** (con precios desde ¥10,000–20,000/mes).
@@ -159,7 +161,7 @@ Licencia MIT. Libre para uso comercial, modificación y redistribución.
 
 ## Contribuciones
 
-Issues y PRs son bienvenidos. Por favor envíalos a `Shudesu/line-harness-oss` (este repositorio).
+Este repositorio (`rasenca/line-harness-oss`) es un fork de uso interno de Rasenca; los cambios siguen el flujo de PR interno de Rasenca (ver [.agents/conventions.md](.agents/conventions.md)). **Para issues y PRs sobre el producto, usa el proyecto upstream [`Shudesu/line-harness-oss`](https://github.com/Shudesu/line-harness-oss).**
 
 ---
 

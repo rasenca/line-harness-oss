@@ -1,6 +1,6 @@
 # plans.md — マスタープラン
 
-> 更新日: 2026-07-22
+> 更新日: 2026-07-22（P1 完了）
 > ゴール: `Shudesu/line-harness-oss` のフォークである `rasenca/line-harness-oss` を、Rasenca org の
 > リポジトリとして bootstrap-playbook 流儀で（意思決定を追える形で・upstream 誤爆なく）運用できる状態に育てる。
 
@@ -10,9 +10,9 @@
 
 | Phase | 内容 | 状態 | 主成果物 |
 |-------|------|------|---------|
-| P0 | 骨格 + 運用スキル配置 + フォーク安全規律の明文化（この初手 PR） | ✅ DONE | `.agents/`・`.claude/skills/`・AGENTS.md |
-| P1 | 本家由来ドキュメントの棚卸しと Rasenca 版方針（Q-001） | ⬜ NEXT | decisions/・docs/ |
-| P2 | ブランチ保護 / Rulesets を Rasenca org 側で設定（Q-002） | ⬜ | GitHub 設定 + ADR |
+| P0 | 骨格 + 運用スキル配置 + フォーク安全規律の明文化（初手 PR #2） | ✅ DONE | `.agents/`・`.claude/skills/`・AGENTS.md |
+| P1 | 本家由来ドキュメントの棚卸しと扱い方針（Q-001 / ADR-0003） | ✅ DONE | ADR-0003・README/CONTRIBUTING/SECURITY 注記 |
+| P2 | ブランチ保護 / Rulesets を Rasenca org 側で設定（Q-002） | ⬜ NEXT | GitHub 設定 + ADR |
 | P3 | Rasenca 独自のデプロイ／環境運用を決めるか（Q-003） | ⬜ | ADR・docs/ |
 | P4 | 本家追従（update-from-upstream）運用の確認・調整（Q-004） | ⬜ | .github/workflows/ |
 
@@ -23,6 +23,6 @@
 
 ## 次アクション
 
-1. この初手 PR を `create-pr` skill で `rasenca/line-harness-oss` の `main` 宛に出す（本 PR の変更は `.agents/`・`.claude/`・`AGENTS.md` のみで worker-ci のパス対象外＝CI は起動しない。PR 本文「検証」に「骨格＋運用スキル＋規約のみ・アプリ挙動への影響なし・手動確認内容」を明記）。
-2. P1: 本家由来ドキュメント（OSS-SYNC-CHARTER / README / CONTRIBUTING 等）を棚卸しし、Rasenca 版へ置換 or 併記 or 現状維持を判断（Q-001）。
-3. P2: Rasenca org 側で main のブランチ保護 / Rulesets を検討（Q-002）。
+1. P2: Rasenca org 側で `main` のブランチ保護 / Rulesets を検討（Q-002）。直 push・force push を技術強制で塞げるか（org プラン制約の確認）。
+2. P3: Rasenca が独自にデプロイ／環境運用（Cloudflare 等）を持つかを判断（Q-003）。持つなら別 ADR。
+3. P4: `update-from-upstream.yml`（本家追従）の運用確認・調整（Q-004。継承 workflow の `gh pr create` --repo 未固定も併せて）。

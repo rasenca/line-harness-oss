@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/Shudesu/line-harness-oss/security
-    about: Please do not disclose vulnerabilities in public issues.
+    url: https://github.com/rasenca/line-harness-oss/security
+    about: Please do not disclose vulnerabilities in public issues. See SECURITY.md for upstream vs. fork reporting.
   - name: Documentation
-    url: https://github.com/Shudesu/line-harness-oss/tree/main/docs
+    url: https://github.com/rasenca/line-harness-oss/tree/main/docs
     about: Check the setup guide, manual, and wiki-style docs.
