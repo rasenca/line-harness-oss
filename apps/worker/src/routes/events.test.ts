@@ -1659,6 +1659,44 @@ describe('LIFF POST /api/liff/events/:id/bookings', () => {
     expect(body.error).toBe('duplicate_friend_booking');
     expect(body.existing?.id).toBe('b-old');
   });
+
+  // #8: max_bookings_per_friend=null means "unlimited". A second booking by the
+  // same identity must be allowed. Before the fix the post-insert re-check used
+  // effectiveMax = max ?? 1, so null collapsed to 1 and the 2nd row was inserted
+  // then DELETEd with 409 duplicate_friend_booking.
+  test('max_bookings_per_friend=null allows a second booking by the same identity', async () => {
+    const state = {
+      events: [
+        baseEvent({
+          id: 'e1',
+          line_account_id: 'la1',
+          max_bookings_per_friend: null, // 「制限なし」
+          requires_approval: 0,
+          is_published: 1,
+        }),
+      ],
+      slots: [{ id: 's1', event_id: 'e1', starts_at: '2099-06-01T10:00:00Z', ends_at: '2099-06-01T12:00:00Z', capacity: null, is_active: 1, sort_order: 0, deleted_at: null }],
+      bookings: [
+        // 同一人物 (identity uid:U1-uuid) の 1 件目が既に存在
+        { id: 'b-old', event_id: 'e1', slot_id: 's1', friend_id: 'f1', line_account_id: 'la1', status: 'confirmed', identity_key: 'uid:U1-uuid' } as BookingRow & Record<string, unknown>,
+      ],
+      accounts: [{ id: 'la1', liff_id: 'L1', is_active: 1, channel_access_token: 'tok' }],
+      friends: [{ id: 'f1', line_account_id: 'la1', line_user_id: 'U1', user_id: 'U1-uuid' }],
+    };
+    liffAuthMocks.verifyCallerLineUserId.mockResolvedValue('U1');
+    idempotencyMocks.reserveEventIdempotency.mockResolvedValue({ kind: 'inserted' });
+    const app = setupApp(state);
+    const res = await app.request('/api/liff/events/e1/bookings?liffId=L1', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'Idempotency-Key': 'k2', 'Authorization': 'Bearer t' },
+      body: JSON.stringify({ slot_id: 's1' }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { status: string };
+    expect(body.status).toBe('confirmed');
+    // The new row coexists with the existing one — nothing was rolled back.
+    expect(state.bookings).toHaveLength(2);
+  });
 });
 
 describe('LIFF GET /api/liff/events/me', () => {
