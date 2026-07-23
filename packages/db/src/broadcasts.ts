@@ -412,6 +412,30 @@ export async function recoverStalledBroadcasts(db: D1Database): Promise<void> {
        AND julianday('now', '+9 hours') - julianday(batch_lock_at) > ${STALL_LOCK_REVOKE_DAYS_RESUMABLE}`,
     )
     .run();
+
+  // 3) segment / tag の途中停滞 (非 dedup・success_count > 0)。非 dedup の queue 経路
+  //    (processQueuedBroadcastBatches) は処理中 batch_offset を -1 に保持したまま
+  //    success_count だけをバッチ単位で加算するため、ロック中にハードクラッシュ
+  //    (isolate eviction / wall-clock 超過 / 未捕捉例外) すると
+  //    batch_offset=-1・success_count>0・target_type != dedup の row が残り、
+  //    系統 1) (success_count=0) にも系統 2) (dedup) にも該当せず永久 stuck になる (#5)。
+  //    non-dedup 経路では success_count は currentOffset と同歩で進む (成功バッチごとに
+  //    両方 +batch.length・失敗バッチは加算せず offset も進めない) ので、
+  //    batch_offset=success_count に戻せば既送分を再送せず途中から resume できる。
+  //    ID 集合ベースの idempotency (dedup_progress) は無く送信対象の順序に依存する
+  //    resume なので、Worker が確実に死んだと言える長め (30分) の閾値を使う。
+  await db
+    .prepare(
+      `UPDATE broadcasts SET batch_offset = success_count, batch_lock_at = NULL
+       WHERE status = 'sending' AND batch_offset = -1
+       AND sent_at IS NULL
+       AND target_type != 'multi-account-dedup'
+       AND success_count > 0
+       AND (segment_conditions IS NOT NULL OR account_ids IS NOT NULL)
+       AND batch_lock_at IS NOT NULL
+       AND julianday('now', '+9 hours') - julianday(batch_lock_at) > ${STALL_LOCK_REVOKE_DAYS_NO_PROGRESS}`,
+    )
+    .run();
 }
 
 export async function updateBroadcastBatchProgress(
