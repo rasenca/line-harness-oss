@@ -8,6 +8,8 @@
  * 4. Submit booking → show confirmation
  */
 
+import { escapeHtml } from '../lib/escape-html.js';
+
 declare const liff: {
   init(config: { liffId: string }): Promise<void>;
   isLoggedIn(): boolean;
@@ -50,12 +52,6 @@ const state: BookingState = {
   loading: false,
   submitting: false,
 };
-
-function escapeHtml(str: string): string {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
 
 function apiCall(path: string, options?: RequestInit): Promise<Response> {
   return fetch(path, {
