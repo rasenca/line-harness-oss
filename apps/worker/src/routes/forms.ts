@@ -52,6 +52,61 @@ function serializeForm(
   };
 }
 
+// Minimal, PUBLIC view of a form for the unauthenticated LIFF renderer.
+// GET /api/forms/:id is public (auth.ts allowlist), so this MUST NOT leak
+// integration credentials or internal automation config: the full serializeForm
+// (used only by authenticated admin endpoints) returns on_submit_webhook_url /
+// on_submit_webhook_headers — which routinely hold downstream auth headers /
+// API keys — plus the tag/scenario ids. Exposing those on a public endpoint is
+// the credential/config disclosure reported as #12/#15. The renderer only needs
+// to KNOW that an engagement gate exists (hasEngagementGate), never its URL or
+// credentials; the gate itself is now called through the server-side proxy
+// endpoints below, so the browser never sees the webhook config.
+function serializePublicForm(row: DbForm) {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    fields: JSON.parse(row.fields || '[]') as unknown[],
+    isActive: Boolean(row.is_active),
+    hasEngagementGate: Boolean(row.on_submit_webhook_url),
+    // User-facing gate result strings shown in the LIFF UI — not secrets.
+    onSubmitMessageContent: row.on_submit_message_content,
+    onSubmitWebhookFailMessage: row.on_submit_webhook_fail_message,
+    ogTitle: row.og_title,
+    ogDescription: row.og_description,
+    ogImageUrl: row.og_image_url,
+  };
+}
+
+// Resolve the X engagement-gate target (base URL + gate id + auth headers) from
+// the form's SERVER-STORED webhook config. Never derived from client input, so
+// the webhook credentials can neither be redirected to an attacker-controlled
+// origin via a client ?xh param (#17) nor be handed to the browser (#12/#15).
+// The stored on_submit_webhook_url has the shape
+// https://<host>/api/engagement-gates/<gateId>/verify.
+function resolveXGate(
+  row: DbForm,
+): { baseUrl: string; gateId: string; headers: Record<string, string> } | null {
+  const webhookUrl = row.on_submit_webhook_url;
+  if (!webhookUrl) return null;
+  const gateMatch = webhookUrl.match(/engagement-gates\/([^/]+)\/verify/);
+  const baseMatch = webhookUrl.match(/^(https?:\/\/[^/]+)/);
+  if (!gateMatch || !baseMatch) return null;
+  let headers: Record<string, string> = {};
+  if (row.on_submit_webhook_headers) {
+    try {
+      const parsed = JSON.parse(row.on_submit_webhook_headers) as unknown;
+      if (parsed && typeof parsed === 'object') {
+        headers = parsed as Record<string, string>;
+      }
+    } catch {
+      /* ignore malformed header JSON */
+    }
+  }
+  return { baseUrl: baseMatch[1], gateId: gateMatch[1], headers };
+}
+
 function serializeSubmission(row: DbFormSubmission & { friend_name?: string | null }) {
   return {
     id: row.id,
@@ -90,10 +145,58 @@ forms.get('/api/forms/:id', async (c) => {
     if (!form) {
       return c.json({ success: false, error: 'Form not found' }, 404);
     }
-    return c.json({ success: true, data: serializeForm(form) });
+    // Public endpoint — return the minimal, credential-free view (#12/#15).
+    return c.json({ success: true, data: serializePublicForm(form) });
   } catch (err) {
     console.error('GET /api/forms/:id error:', err);
     return c.json({ success: false, error: 'Internal server error' }, 500);
+  }
+});
+
+// GET /api/forms/:id/x-repliers — server-side proxy for the X engagement-gate
+// replier list. PUBLIC (used by the LIFF form page), but the X Harness base URL
+// and auth headers are resolved from the server-stored webhook config
+// (resolveXGate), never from client input, so the form's webhook credentials
+// stay server-side (#12/#15/#17). Degrades to an empty pool on any error so the
+// LIFF page keeps working (matching the previous client-side fetch's catch).
+forms.get('/api/forms/:id/x-repliers', async (c) => {
+  try {
+    const form = await getFormById(c.env.DB, c.req.param('id'));
+    if (!form) return c.json({ success: false, error: 'Form not found' }, 404);
+    const gate = resolveXGate(form);
+    if (!gate) return c.json({ success: true, data: [] });
+    const res = await fetch(
+      `${gate.baseUrl}/api/engagement-gates/${encodeURIComponent(gate.gateId)}/repliers`,
+      { headers: gate.headers },
+    );
+    if (!res.ok) return c.json({ success: false, data: [] });
+    return c.json(await res.json());
+  } catch (err) {
+    console.error('GET /api/forms/:id/x-repliers error:', err);
+    return c.json({ success: false, data: [] });
+  }
+});
+
+// GET /api/forms/:id/x-verify?username=... — server-side proxy for X
+// engagement-gate verification. Same trust model as x-repliers: credentials and
+// target come from the server-stored config, never the client.
+forms.get('/api/forms/:id/x-verify', async (c) => {
+  try {
+    const username = (c.req.query('username') ?? '').trim().replace(/^@/, '');
+    if (!username) return c.json({ success: false, error: 'username required' }, 400);
+    const form = await getFormById(c.env.DB, c.req.param('id'));
+    if (!form) return c.json({ success: false, error: 'Form not found' }, 404);
+    const gate = resolveXGate(form);
+    if (!gate) return c.json({ success: false, error: 'Engagement gate not configured' }, 404);
+    const res = await fetch(
+      `${gate.baseUrl}/api/engagement-gates/${encodeURIComponent(gate.gateId)}/verify?username=${encodeURIComponent(username)}`,
+      { headers: gate.headers },
+    );
+    if (!res.ok) return c.json({ success: false, error: 'verify failed' }, 502);
+    return c.json(await res.json());
+  } catch (err) {
+    console.error('GET /api/forms/:id/x-verify error:', err);
+    return c.json({ success: false, error: 'verify unavailable' }, 502);
   }
 });
 
