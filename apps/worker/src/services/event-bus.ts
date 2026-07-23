@@ -223,6 +223,33 @@ function matchConditions(
   return true;
 }
 
+/**
+ * Resolve an effective LINE channel access token for a friend's owning account.
+ * Several fireEvent callers on the tag_change / cv_fire paths (friends.ts,
+ * friend-tag-attach.ts, stripe.ts) pass a friendId but NO token. Without this
+ * lookup, token-requiring actions (send_message / rich-menu) silently `break`
+ * and are still logged as success (#6). Resolving the account token here lets
+ * those automations actually fire; a null result means the send genuinely
+ * cannot happen and the caller throws so the log records a failure.
+ */
+async function resolveAccountAccessToken(
+  db: D1Database,
+  friendId: string,
+  provided?: string,
+): Promise<string | null> {
+  if (provided) return provided;
+  const row = await db
+    .prepare(
+      `SELECT la.channel_access_token AS token
+         FROM friends f
+         JOIN line_accounts la ON la.id = f.line_account_id
+        WHERE f.id = ?`,
+    )
+    .bind(friendId)
+    .first<{ token: string | null }>();
+  return row?.token ?? null;
+}
+
 /** アクション実行 */
 async function executeAction(
   db: D1Database,
@@ -250,13 +277,17 @@ async function executeAction(
       break;
 
     case 'send_message': {
-      if (!lineAccessToken || !friendId) break;
+      if (!friendId) break;
+      const token = await resolveAccountAccessToken(db, friendId, lineAccessToken);
+      if (!token) {
+        throw new Error('send_message: no LINE access token for the friend\'s account');
+      }
       const friend = await db
         .prepare('SELECT line_user_id FROM friends WHERE id = ?')
         .bind(friendId)
         .first<{ line_user_id: string }>();
-      if (!friend) break;
-      const lineClient = new LineClient(lineAccessToken);
+      if (!friend) throw new Error('send_message: friend not found');
+      const lineClient = new LineClient(token);
 
       // template_id が set なら templates から content/type を resolve、
       // なければ inline params を使う。template が見つからない (削除済 等) は
@@ -344,25 +375,33 @@ async function executeAction(
     }
 
     case 'switch_rich_menu': {
-      if (!lineAccessToken || !friendId) break;
+      if (!friendId) break;
+      const token = await resolveAccountAccessToken(db, friendId, lineAccessToken);
+      if (!token) {
+        throw new Error('switch_rich_menu: no LINE access token for the friend\'s account');
+      }
       const friend = await db
         .prepare('SELECT line_user_id FROM friends WHERE id = ?')
         .bind(friendId)
         .first<{ line_user_id: string }>();
-      if (!friend) break;
-      const lineClient = new LineClient(lineAccessToken);
+      if (!friend) throw new Error('switch_rich_menu: friend not found');
+      const lineClient = new LineClient(token);
       await lineClient.linkRichMenuToUser(friend.line_user_id, action.params.richMenuId);
       break;
     }
 
     case 'remove_rich_menu': {
-      if (!lineAccessToken || !friendId) break;
+      if (!friendId) break;
+      const token = await resolveAccountAccessToken(db, friendId, lineAccessToken);
+      if (!token) {
+        throw new Error('remove_rich_menu: no LINE access token for the friend\'s account');
+      }
       const friend = await db
         .prepare('SELECT line_user_id FROM friends WHERE id = ?')
         .bind(friendId)
         .first<{ line_user_id: string }>();
-      if (!friend) break;
-      const lineClient = new LineClient(lineAccessToken);
+      if (!friend) throw new Error('remove_rich_menu: friend not found');
+      const lineClient = new LineClient(token);
       await lineClient.unlinkRichMenuFromUser(friend.line_user_id);
       break;
     }
