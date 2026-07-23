@@ -56,3 +56,22 @@
   2. **友だち重複検出の方式が不一致**: README は「picture_url トークン照合」を謳うが、docs の重複検知は一貫して `identity_key`（UID/電話/メール複合）ベース。どちらが実装か → [Q-006](../open-questions.md)。
   3. **帰属ロジックが 2 系統併存**（アフィリ=90 日窓 last-touch / 広告返送=窓なし最新 click-id）。意図的な別物か、統一漏れか要確認。
   4. v0.10.1 の first-touch pin 緩和が前提とする「上流エンゲージメントゲート」が Rasenca 運用で成立するか要検討。
+
+## Update (2026-07-23) — Q-005 / Q-006 のコード裏取り（留保 1・2 を解消）
+
+P7（転記 ADR とコードの突合）で `apps/worker` を grep 確認。留保 1・2 を解消する。
+
+**留保 1（Q-005）解消: 広告 CV 返送は「提案仕様」ではなく実装済み＝現行の正。**
+- `sendAdConversions` が実在（`apps/worker/src/services/ad-conversion.ts:16`）。Meta CAPI = `https://graph.facebook.com/v21.0/${pixel_id}/events`（同:89）、Google Ads = `https://googleads.googleapis.com/v17/customers/${customer_id}:uploadClickConversions`（同:167）を実送信。
+- テーブル `ad_platforms` / `ad_conversion_logs` は本番スキーマに存在（`packages/db/schema.sql:665,678`、`packages/db/migrations/010_ad_conversions.sql`）＝ `ad-conversion-spec.md` の `ALTER TABLE`/新規前提は既に取り込み済み。
+- event-bus 統合も実装（`apps/worker/src/services/event-bus.ts:58` で `fireEvent` → `sendAdConversions`）。テスト送信 API も存在（`apps/worker/src/routes/ad-platforms.ts:145`）。
+- → 本 ADR「広告 CV 返送」節は Rasenca フォークで**実装済み（現行の正）**。source を `ad-conversion-spec.md`（提案）から上記コードへ格上げして読むこと。
+
+**留保 2（Q-006）解消: 「picture_url トークン」と「identity_key」は矛盾せず、同じ picture_url トークンが土台。ただし本 ADR の identity_key 説明が不正確。**
+- 現行の `identity_key` は **`COALESCE(URL_TOKEN_SQL, 'uid:'||friends.user_id, 'solo:'||friends.id)`**（`apps/worker/src/lib/identity-key.ts:10-15`）。primary の `URL_TOKEN_SQL` は **`picture_url` の SUBSTR で抽出したトークン**（`apps/worker/src/lib/url-token.ts`）。→ **本 ADR 41 行目・留保 2 の「identity_key = LINE UID/電話/メール複合キー」は誤り**。実体は「picture_url 由来トークン > user_id > friend_id」の COALESCE で、電話/メールは含まない（email→phone 名寄せは別機構＝`users` テーブル / ADR-0008・0010）。
+- 2 つの重複機構は目的別に併存: (a) `apps/worker/src/services/duplicate-detect.ts` = クロスアカウント友だち重複を picture_url トークンで自動タグ付け。**ただし cron 実行は無効化済み**（`apps/worker/src/index.ts:953-960`、`account_settings.duplicate_tag_mapping` 空でも無効）。(b) `identity_key`（上記 COALESCE）= アフィリ成果の水増し検知（`packages/db/src/affiliate-report.ts:283-311`）と event_booking の重複判定に使用。
+- → README の「picture_url トークン照合」も docs の「identity_key」も**どちらも実在**し、後者の primary が前者。留保 2 は「二者択一」ではなく「同一トークンの別用途 2 系統」で決着。
+
+**留保 3（帰属 2 系統併存）: 確認済み・意図的。** アフィリ=90 日窓 last-touch（`affiliate-report.ts`）と 広告返送=窓なし最新 click-id（`ad-conversion.ts`）は別ロジックとして両方実装されており、統一漏れではなく仕様。
+
+→ [Q-005](../open-questions.md) / [Q-006](../open-questions.md) は ANSWERED。関連: ADR-0008（identity_key の土台 = データモデル）、ADR-0010（マルチアカウント名寄せ）。

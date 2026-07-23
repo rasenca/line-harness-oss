@@ -32,3 +32,16 @@ D1（SQLite）上のスキーマに一貫した設計原則が敷かれている
 
 - クロスアカウント名寄せ（ADR-0010 マルチアカウント/BAN）、帰属（ADR-0012）、認証（ADR-0009）はこのデータモデルに依存する。
 - **留保（要コード裏取り）:** テーブル総数の記載揺れ・パッケージ名混在は [Q-008](../open-questions.md)。キャッシュ列の整合性を保つ更新経路は要コード確認。
+
+## Update (2026-07-23) — Q-008(テーブル数 / パッケージ名) のコード裏取り
+
+P7 で `packages/db` / 各 `package.json` を確認。
+
+**テーブル総数 = 55（docs の 42/45 は両方 stale）。**
+- `grep -cE '^CREATE TABLE' packages/db/schema.sql` = **55**。docs（Home.md「45」/ Architecture.md「42」）はいずれも過小＝スキーマが成長済み。以降テーブル数を引用する際は schema.sql を典拠とする。
+
+**パッケージ名は実際に混在（doc 誤記ではなく現行の実態）。**
+- `@line-crm/*`（コア）= `db` / `line-sdk` / `shared`。`@line-harness/*`（ツール系）= `mcp-server` / `sdk` / `update-engine` / `plugin-*`。無スコープ = `web` / `worker` / `liff` / `create-line-harness`。
+- → 「`@line-harness/*` と `@line-crm/*` の混在」は**史実として正**（コアは旧 `@line-crm`、後発ツールは `@line-harness`）。ADR/docs で参照する際はパッケージごとの実スコープに従う（例: deploy workflow の `pnpm --filter @line-crm/shared`）。
+
+→ [Q-008](../open-questions.md) のテーブル数・パッケージ名は ANSWERED。ADR-0007 の同一留保も本 Update で解消（相互参照）。

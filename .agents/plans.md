@@ -17,7 +17,7 @@
 | P4 | 本家追従 update-from-upstream の運用確認・改修（Q-004 / ADR-0006） | ✅ DONE | ADR-0006・workflow に --repo 明示 |
 | P5 | （将来）Rasenca 独自デプロイの有効化（ADR-0005 の opt-in 手順を実施） | ⬜ 将来 | secrets/変数設定・wrangler 環境定義・リリース手順正典化 |
 | P6 | Upstream 由来 docs の設計意図を ADR 化（0007〜0017・全ドメイン） | ✅ DONE | .agents/decisions/0007-0017 |
-| P7 | 転記 ADR とコードの突合・留保解消（`sync-adrs`） | ⬜ NEXT | Q-005〜Q-008 の裏取り・ADR に `## Update` |
+| P7 | 転記 ADR とコードの突合・留保解消（`sync-adrs`） | ✅ DONE | Q-005〜Q-008 を裏取り。ADR-0007〜0012 に `## Update (2026-07-23)` |
 
 ## 直近の意思決定（ADR）
 
@@ -26,8 +26,8 @@
 
 ## 次アクション
 
-> P0〜P4 の立ち上げ・運用ハードニングと、P6 の upstream docs → ADR 転記は完了。
+> P0〜P4 の立ち上げ・運用ハードニング、P6 の upstream docs → ADR 転記、P7 の転記 ADR ↔ コード突合まで完了。
 
-1. **（P7・推奨）転記 ADR（0007〜0017）とコードの突合**。`sync-adrs` で Q-005〜Q-008 を裏取りし、乖離を各 ADR に `## Update (日付)` で反映（特に広告CV spec の実装有無・重複検出方式・トラフィックプールの実在）。
-2. （将来 P5）Rasenca 独自デプロイを有効化する場合は [ADR-0005](decisions/0005-deploy-operation-policy.md) の opt-in 手順に従う（secrets はユーザーが登録）。
-3. upstream 追従 PR（`chore: update from upstream`）が来たら diff を確認してマージ（自動マージしない）。
+1. **（残・任意）転記 ADR 0013〜0017 の細部裏取り**。P7 で Q-005〜Q-008（ADR-0007〜0012 中心）は解消。残る stale doc の是正（例: 22-Operations.md の CORS `*` 表記）や 0013〜0017 の要所確認は必要に応じて `sync-adrs` で追う。
+2. （将来 P5）Rasenca 独自デプロイを有効化する場合は [ADR-0005](decisions/0005-deploy-operation-policy.md) の opt-in 手順に従う（LIFF 用 Pages は作らない／secrets はユーザーが登録）。
+3. upstream 追従 PR（`chore: update from upstream`）が来たら diff を確認してマージ（自動マージしない）。**未処理: `origin/upstream/update-20260722-203245`（PR 未作成・明示依頼まで保留）**。

@@ -39,3 +39,7 @@ LINE 公式アカウント CRM を、外部 SaaS（"L社/U社"）の代替とし
 - 以降の各ドメイン ADR（データモデル ADR-0008、認証 ADR-0009、配信 ADR-0010 …）は本 ADR の基盤の上に立つ。
 - **留保（要コード裏取り）:** ドキュメント間でテーブル数の記載が食い違う（Home.md:41「45」 vs Architecture.md:26,268「42」）。実体は `packages/db/schema.sql` で確認する（→ [open-questions Q-008](../open-questions.md)）。パッケージ名も docs 内で `@line-harness/*` と `@line-crm/*` が混在（同 Q-008）。
 - プロダクト位置づけのうち料金比較・OSS マーケティング表現は本家の GTM 由来（shudesu-only-reference）だが、プロダクトを運用する以上「AI ネイティブ安全運用基盤」という思想は Rasenca でも踏襲する。
+
+## Update (2026-07-23) — 留保（テーブル数・パッケージ名）を ADR-0008 で解消
+
+本 ADR Consequences の留保（テーブル数 42/45 の食い違い・`@line-harness/*` と `@line-crm/*` の混在）を P7 でコード裏取りし、[ADR-0008 の Update (2026-07-23)](0008-data-model-and-schema-conventions.md) に確定記録した。要点: **テーブル総数 = 55（schema.sql 実測）**、パッケージ名混在は**史実として正**（コア = `@line-crm/*`、後発ツール = `@line-harness/*`）。詳細と file:line は ADR-0008 を参照。
