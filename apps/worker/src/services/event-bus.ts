@@ -205,6 +205,22 @@ function matchConditions(
     if (payload.eventData.tagId !== conditions.tag_id) return false;
   }
 
+  // tag_change の add/remove 判別。tag_change イベントは eventData.action に
+  // 'add' | 'remove' を載せる (friends.ts / friend-tag-attach.ts)。この判別が
+  // 無いと tag_id (や無条件) の automation がタグ付与・削除の両方で発火し、
+  // 削除時に付与向けの送信/シナリオ登録/タグ復活を誘発する (#7)。
+  // conditions.action でスコープする: 未指定=add のみ / 'remove'=削除のみ /
+  // 'any'|'both'=両方。既存 (action 未指定) の tag_change ルールは add-only が
+  // 既定になり、削除では発火しない。action を持たない他イベントは無影響。
+  const payloadAction = payload.eventData?.action;
+  if (payloadAction === 'add' || payloadAction === 'remove') {
+    const scope =
+      typeof conditions.action === 'string' ? conditions.action.toLowerCase() : 'add';
+    if (scope !== 'any' && scope !== 'both' && scope !== payloadAction) {
+      return false;
+    }
+  }
+
   // keyword チェック（message_received イベント用）
   if (conditions.keyword !== undefined && payload.eventData) {
     const text = payload.eventData.text as string | undefined;

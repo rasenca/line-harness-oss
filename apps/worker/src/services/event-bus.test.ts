@@ -273,6 +273,58 @@ describe('fireEvent — send_message action logging', () => {
     );
   });
 
+  // #7: tag_change carries eventData.action = 'add' | 'remove'. matchConditions
+  // must distinguish them so a removal does not trigger add-oriented automations.
+  async function setTagChangeAutomation(conditionAction?: string) {
+    const db = await import('@line-crm/db');
+    const conditions: Record<string, unknown> = { tag_id: 'trial' };
+    if (conditionAction !== undefined) conditions.action = conditionAction;
+    (db.getActiveAutomationsByEvent as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue([
+      {
+        id: 'auto-tag',
+        line_account_id: null,
+        conditions: JSON.stringify(conditions),
+        actions: JSON.stringify([{ type: 'add_tag', params: { tagId: 'welcomed' } }]),
+      },
+    ]);
+    return db;
+  }
+
+  async function fireTagChange(action: 'add' | 'remove') {
+    const dbFake = fakeDb({ friend: { line_user_id: 'U_test' }, capturedInserts: captured });
+    await fireEvent(dbFake, 'tag_change', { friendId: 'friend-1', eventData: { tagId: 'trial', action } });
+  }
+
+  it('fires on add for a tag_change automation with no explicit action (add-only default)', async () => {
+    const db = await setTagChangeAutomation();
+    await fireTagChange('add');
+    expect(db.createAutomationLog).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT fire on remove for an add-oriented (default) tag_change automation', async () => {
+    const db = await setTagChangeAutomation();
+    await fireTagChange('remove');
+    expect(db.createAutomationLog).not.toHaveBeenCalled();
+  });
+
+  it('fires on remove when the automation opts in with action=remove', async () => {
+    const db = await setTagChangeAutomation('remove');
+    await fireTagChange('remove');
+    expect(db.createAutomationLog).toHaveBeenCalledTimes(1);
+    // ...and does not fire on add for a remove-only automation.
+    vi.clearAllMocks();
+    const db2 = await setTagChangeAutomation('remove');
+    await fireTagChange('add');
+    expect(db2.createAutomationLog).not.toHaveBeenCalled();
+  });
+
+  it('fires on both when action=any', async () => {
+    const db = await setTagChangeAutomation('any');
+    await fireTagChange('add');
+    await fireTagChange('remove');
+    expect(db.createAutomationLog).toHaveBeenCalledTimes(2);
+  });
+
   it('resolves params.template_id via templates table when set', async () => {
     const db = await import('@line-crm/db');
     (db.getActiveAutomationsByEvent as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue([
