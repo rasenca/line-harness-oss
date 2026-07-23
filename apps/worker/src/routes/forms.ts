@@ -18,6 +18,7 @@ import type {
   FormUsedByAccount,
 } from '@line-crm/db';
 import type { Env } from '../index.js';
+import { requireRole } from '../middleware/role-guard.js';
 
 const forms = new Hono<Env>();
 
@@ -96,7 +97,7 @@ forms.get('/api/forms/:id', async (c) => {
 });
 
 // POST /api/forms — create form
-forms.post('/api/forms', async (c) => {
+forms.post('/api/forms', requireRole('owner', 'admin', 'staff'), async (c) => {
   try {
     const body = await c.req.json<{
       name: string;
@@ -144,9 +145,9 @@ forms.post('/api/forms', async (c) => {
 });
 
 // PUT /api/forms/:id — update form
-forms.put('/api/forms/:id', async (c) => {
+forms.put('/api/forms/:id', requireRole('owner', 'admin', 'staff'), async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const body = await c.req.json<{
       name?: string;
       description?: string | null;
@@ -197,9 +198,9 @@ forms.put('/api/forms/:id', async (c) => {
 });
 
 // DELETE /api/forms/:id
-forms.delete('/api/forms/:id', async (c) => {
+forms.delete('/api/forms/:id', requireRole('owner', 'admin', 'staff'), async (c) => {
   try {
-    const id = c.req.param('id');
+    const id = c.req.param('id')!;
     const form = await getFormById(c.env.DB, id);
     if (!form) {
       return c.json({ success: false, error: 'Form not found' }, 404);

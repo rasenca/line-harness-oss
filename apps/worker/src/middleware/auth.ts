@@ -132,6 +132,7 @@ export async function authMiddleware(c: Context<Env>, next: Next): Promise<Respo
   // Skip auth for the LINE webhook endpoint — it uses signature verification instead
   // Skip auth for OpenAPI docs — public documentation
   const path = new URL(c.req.url).pathname;
+  const method = c.req.method.toUpperCase();
   // LIFF / admin の SPA アセットは Authorization ヘッダなしで HTML を取りに
   // くる。Worker は API 以外のパスを ASSETS バインディングから配信するので、
   // /api/ で始まらないパスは認証 skip して static asset として返す。
@@ -176,7 +177,10 @@ export async function authMiddleware(c: Context<Env>, next: Next): Promise<Respo
     path.match(/^\/api\/forms\/[^/]+\/submit$/) ||
     path.match(/^\/api\/forms\/[^/]+\/opened$/) ||
     path.match(/^\/api\/forms\/[^/]+\/partial$/) ||
-    path.match(/^\/api\/forms\/[^/]+$/) || // GET form definition (public for LIFF)
+    // GET form definition is public for LIFF; mutations (PUT/DELETE) on the same
+    // path MUST authenticate — gate the bypass on a safe method so it can't skip
+    // auth for state-changing requests.
+    (SAFE_METHODS.has(method) && path.match(/^\/api\/forms\/[^/]+$/)) ||
     path === '/api/meet-callback' || // Meet Harness completion callback
     path === '/api/qr' // Public QR proxy — used by desktop landing pages
   ) {
