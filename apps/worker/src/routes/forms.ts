@@ -19,6 +19,7 @@ import type {
 } from '@line-crm/db';
 import type { Env } from '../index.js';
 import { requireRole } from '../middleware/role-guard.js';
+import { verifyCallerLineUserId } from '../services/liff-auth.js';
 
 const forms = new Hono<Env>();
 
@@ -233,16 +234,13 @@ forms.get('/api/forms/:id/submissions', async (c) => {
 forms.post('/api/forms/:id/opened', async (c) => {
   try {
     const formId = c.req.param('id');
-    const body = await c.req.json<{ lineUserId?: string; friendId?: string }>();
-    const lineUserId = body.lineUserId;
-    const friendId = body.friendId;
 
-    // Resolve friend
-    let friend = friendId
-      ? await getFriendById(c.env.DB, friendId)
-      : lineUserId
-        ? await getFriendByLineUserId(c.env.DB, lineUserId)
-        : null;
+    // Identity is derived from the verified LINE id_token, never from a
+    // client-supplied friendId/lineUserId (which could name any friend).
+    const callerLineUserId = await verifyCallerLineUserId(c.req.header('Authorization'), c.env);
+    const friend = callerLineUserId
+      ? await getFriendByLineUserId(c.env.DB, callerLineUserId)
+      : null;
 
     const now = jstNow();
     await c.env.DB.prepare(
@@ -265,16 +263,15 @@ forms.post('/api/forms/:id/opened', async (c) => {
 // POST /api/forms/:id/partial — save survey answers without x_username (public, used by LIFF page 1)
 forms.post('/api/forms/:id/partial', async (c) => {
   try {
-    const formId = c.req.param('id');
-    const body = await c.req.json<{ lineUserId?: string; friendId?: string; data?: Record<string, unknown> }>();
+    const body = await c.req.json<{ data?: Record<string, unknown> }>();
 
-    // Resolve friend
-    let friend = body.friendId
-      ? await getFriendById(c.env.DB, body.friendId)
-      : body.lineUserId
-        ? await getFriendByLineUserId(c.env.DB, body.lineUserId)
-        : null;
-
+    // This writes to friend.metadata, so identity MUST come from the verified
+    // LINE id_token — an unverified caller must not target an arbitrary friend.
+    const callerLineUserId = await verifyCallerLineUserId(c.req.header('Authorization'), c.env);
+    if (!callerLineUserId) {
+      return c.json({ success: false, error: 'Unauthorized' }, 401);
+    }
+    const friend = await getFriendByLineUserId(c.env.DB, callerLineUserId);
     if (!friend) {
       return c.json({ success: false, error: 'Friend not found' }, 404);
     }
@@ -335,10 +332,13 @@ forms.post('/api/forms/:id/submit', async (c) => {
       }
     }
 
-    // Resolve friend by lineUserId or friendId
-    let friendId: string | null = body.friendId ?? null;
-    if (!friendId && body.lineUserId) {
-      const friend = await getFriendByLineUserId(c.env.DB, body.lineUserId);
+    // Bind the submission to the verified LINE caller — never to a client-
+    // supplied friendId/lineUserId (spoofable). No verified caller => anonymous
+    // submission (friendId stays null), which can't be attributed to any friend.
+    const callerLineUserId = await verifyCallerLineUserId(c.req.header('Authorization'), c.env);
+    let friendId: string | null = null;
+    if (callerLineUserId) {
+      const friend = await getFriendByLineUserId(c.env.DB, callerLineUserId);
       if (friend) {
         friendId = friend.id;
       }

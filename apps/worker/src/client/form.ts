@@ -87,10 +87,21 @@ function escapeHtml(str: string): string {
 }
 
 function apiCall(path: string, options?: RequestInit): Promise<Response> {
+  // Attach the LINE id_token so identity-bearing form endpoints (submit /
+  // partial / opened) can verify the caller server-side instead of trusting a
+  // spoofable friendId/lineUserId in the body. Only present inside LIFF after
+  // init; harmless on public reads (the server ignores it there).
+  let idToken: string | null = null;
+  try {
+    idToken = liff.getIDToken();
+  } catch {
+    idToken = null;
+  }
   return fetch(path, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
       ...options?.headers,
     },
   });
