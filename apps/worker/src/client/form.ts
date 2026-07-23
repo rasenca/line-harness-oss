@@ -10,6 +10,8 @@
  * URL format: https://liff.line.me/{LIFF_ID}?page=form&id={FORM_ID}
  */
 
+import { escapeHtml } from '../lib/escape-html.js';
+
 declare const liff: {
   init(config: { liffId: string }): Promise<void>;
   isLoggedIn(): boolean;
@@ -79,12 +81,6 @@ const state: FormState = {
 
 // Replier pool loading state (shared between renderFormPage and attachXAutocomplete)
 let _replierPoolReady = false;
-
-function escapeHtml(str: string): string {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
 
 function apiCall(path: string, options?: RequestInit): Promise<Response> {
   // Attach the LINE id_token so identity-bearing form endpoints (submit /
@@ -388,7 +384,7 @@ function render(): void {
   const profileHtml = (formDef.hideProfile || !profile?.pictureUrl)
     ? ''
     : `<div class="form-profile">
-        <img src="${profile.pictureUrl}" alt="" />
+        <img src="${escapeHtml(profile.pictureUrl)}" alt="" />
         <span>${escapeHtml(profile.displayName)} さん</span>
       </div>`;
 

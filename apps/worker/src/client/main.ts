@@ -19,6 +19,7 @@
 import { initBooking } from './booking.js';
 import { initForm } from './form.js';
 import { safeRedirectTarget } from '../lib/safe-redirect.js';
+import { escapeHtml } from '../lib/escape-html.js';
 
 declare const liff: {
   init(config: { liffId: string }): Promise<void>;
@@ -94,12 +95,6 @@ function saveUuid(uuid: string): void {
   }
 }
 
-function escapeHtml(str: string): string {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
 // ─── UI States ──────────────────────────────────────────
 
 function showFriendAdd(profile: { displayName: string; pictureUrl?: string }) {
@@ -111,7 +106,7 @@ function showFriendAdd(profile: { displayName: string; pictureUrl?: string }) {
   container.innerHTML = `
     <div class="card">
       <div class="profile">
-        ${profile.pictureUrl ? `<img src="${profile.pictureUrl}" alt="" />` : ''}
+        ${profile.pictureUrl ? `<img src="${escapeHtml(profile.pictureUrl)}" alt="" />` : ''}
         <p class="name">${escapeHtml(profile.displayName)} さん</p>
       </div>
       <p class="message">まずは友だち追加をお願いします</p>
@@ -201,7 +196,7 @@ function showCompletion(profile: { displayName: string; pictureUrl?: string }, i
       <div class="check-icon">${isRecovery ? '🔄' : '✓'}</div>
       <h2>${isRecovery ? 'おかえりなさい！' : '登録完了！'}</h2>
       <div class="profile">
-        ${profile.pictureUrl ? `<img src="${profile.pictureUrl}" alt="" />` : ''}
+        ${profile.pictureUrl ? `<img src="${escapeHtml(profile.pictureUrl)}" alt="" />` : ''}
         <p class="name">${escapeHtml(profile.displayName)} さん</p>
       </div>
       <p class="message">
