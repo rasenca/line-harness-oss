@@ -179,6 +179,152 @@ describe('fireEvent — send_message action logging', () => {
     expect(captured[0].binds[6]).toBe(null);
   });
 
+  // #6: tag_change / cv_fire callers pass NO lineAccessToken. Previously
+  // send_message silently `break`ed yet was logged as success. Now the token is
+  // resolved from the friend's account, or the action fails loudly.
+  function tokenlessDb(opts: {
+    friend?: { line_user_id: string };
+    accountToken?: string | null;
+    capturedInserts: CapturedInsert[];
+  }): D1Database {
+    return {
+      prepare(sql: string) {
+        return {
+          bind(...args: unknown[]) {
+            if (sql.includes('INSERT INTO messages_log')) {
+              opts.capturedInserts.push({ sql, binds: args });
+            }
+            return this;
+          },
+          async all<T>(): Promise<{ results: T[] }> {
+            return { results: [] };
+          },
+          async first<T>(): Promise<T | null> {
+            if (sql.includes('channel_access_token')) {
+              return (opts.accountToken === undefined
+                ? null
+                : { token: opts.accountToken }) as T | null;
+            }
+            if (sql.includes('FROM friends WHERE id')) {
+              return (opts.friend ?? null) as T | null;
+            }
+            return null;
+          },
+          async run(): Promise<{ success: true }> {
+            return { success: true };
+          },
+        };
+      },
+    } as unknown as D1Database;
+  }
+
+  it('resolves the account token and sends when the caller passes none', async () => {
+    const db = await import('@line-crm/db');
+    (db.getActiveAutomationsByEvent as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue([
+      {
+        id: 'auto-tagfire',
+        line_account_id: null,
+        conditions: JSON.stringify({}),
+        actions: JSON.stringify([{ type: 'send_message', params: { messageType: 'text', content: 'hi' } }]),
+      },
+    ]);
+
+    const dbFake = tokenlessDb({
+      friend: { line_user_id: 'U_test' },
+      accountToken: 'resolved-account-token',
+      capturedInserts: captured,
+    });
+    // No token passed (mirrors friends.ts / stripe.ts tag_change/cv_fire callers).
+    await fireEvent(dbFake, 'tag_change', { friendId: 'friend-1', eventData: { action: 'add' } });
+
+    // The message was actually sent + logged (not a silent no-op).
+    expect(captured).toHaveLength(1);
+    expect(captured[0].binds[3]).toBe('hi');
+    // And the automation was logged as success.
+    expect(db.createAutomationLog).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: 'success' }),
+    );
+  });
+
+  it('logs FAILED (not success) when no token can be resolved', async () => {
+    const db = await import('@line-crm/db');
+    (db.getActiveAutomationsByEvent as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue([
+      {
+        id: 'auto-notoken',
+        line_account_id: null,
+        conditions: JSON.stringify({}),
+        actions: JSON.stringify([{ type: 'send_message', params: { messageType: 'text', content: 'hi' } }]),
+      },
+    ]);
+
+    const dbFake = tokenlessDb({
+      friend: { line_user_id: 'U_test' },
+      accountToken: null, // friend has no resolvable account token
+      capturedInserts: captured,
+    });
+    await fireEvent(dbFake, 'tag_change', { friendId: 'friend-1', eventData: { action: 'add' } });
+
+    // No message sent, and the automation is recorded as failed — NOT success.
+    expect(captured).toHaveLength(0);
+    expect(db.createAutomationLog).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: 'failed' }),
+    );
+  });
+
+  // #7: tag_change carries eventData.action = 'add' | 'remove'. matchConditions
+  // must distinguish them so a removal does not trigger add-oriented automations.
+  async function setTagChangeAutomation(conditionAction?: string) {
+    const db = await import('@line-crm/db');
+    const conditions: Record<string, unknown> = { tag_id: 'trial' };
+    if (conditionAction !== undefined) conditions.action = conditionAction;
+    (db.getActiveAutomationsByEvent as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue([
+      {
+        id: 'auto-tag',
+        line_account_id: null,
+        conditions: JSON.stringify(conditions),
+        actions: JSON.stringify([{ type: 'add_tag', params: { tagId: 'welcomed' } }]),
+      },
+    ]);
+    return db;
+  }
+
+  async function fireTagChange(action: 'add' | 'remove') {
+    const dbFake = fakeDb({ friend: { line_user_id: 'U_test' }, capturedInserts: captured });
+    await fireEvent(dbFake, 'tag_change', { friendId: 'friend-1', eventData: { tagId: 'trial', action } });
+  }
+
+  it('fires on add for a tag_change automation with no explicit action (add-only default)', async () => {
+    const db = await setTagChangeAutomation();
+    await fireTagChange('add');
+    expect(db.createAutomationLog).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT fire on remove for an add-oriented (default) tag_change automation', async () => {
+    const db = await setTagChangeAutomation();
+    await fireTagChange('remove');
+    expect(db.createAutomationLog).not.toHaveBeenCalled();
+  });
+
+  it('fires on remove when the automation opts in with action=remove', async () => {
+    const db = await setTagChangeAutomation('remove');
+    await fireTagChange('remove');
+    expect(db.createAutomationLog).toHaveBeenCalledTimes(1);
+    // ...and does not fire on add for a remove-only automation.
+    vi.clearAllMocks();
+    const db2 = await setTagChangeAutomation('remove');
+    await fireTagChange('add');
+    expect(db2.createAutomationLog).not.toHaveBeenCalled();
+  });
+
+  it('fires on both when action=any', async () => {
+    const db = await setTagChangeAutomation('any');
+    await fireTagChange('add');
+    await fireTagChange('remove');
+    expect(db.createAutomationLog).toHaveBeenCalledTimes(2);
+  });
+
   it('resolves params.template_id via templates table when set', async () => {
     const db = await import('@line-crm/db');
     (db.getActiveAutomationsByEvent as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue([
