@@ -181,6 +181,11 @@ export async function authMiddleware(c: Context<Env>, next: Next): Promise<Respo
     // path MUST authenticate — gate the bypass on a safe method so it can't skip
     // auth for state-changing requests.
     (SAFE_METHODS.has(method) && path.match(/^\/api\/forms\/[^/]+$/)) ||
+    // Public server-side proxies for the X engagement-gate feature (LIFF). Read
+    // only; the webhook credentials stay server-side, so these are safe to
+    // expose without auth. Gate on a safe method for defense in depth.
+    (SAFE_METHODS.has(method) && path.match(/^\/api\/forms\/[^/]+\/x-repliers$/)) ||
+    (SAFE_METHODS.has(method) && path.match(/^\/api\/forms\/[^/]+\/x-verify$/)) ||
     path === '/api/meet-callback' || // Meet Harness completion callback
     path === '/api/qr' // Public QR proxy — used by desktop landing pages
   ) {

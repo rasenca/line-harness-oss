@@ -53,6 +53,9 @@ function app() {
   a.get('/api/forms/:id', (c) => c.json({ success: true, public: true }));
   a.put('/api/forms/:id', (c) => c.json({ success: true, data: c.get('staff') }));
   a.delete('/api/forms/:id', (c) => c.json({ success: true, data: c.get('staff') }));
+  // Public server-side proxies for the X engagement-gate feature (LIFF).
+  a.get('/api/forms/:id/x-repliers', (c) => c.json({ success: true, public: true }));
+  a.get('/api/forms/:id/x-verify', (c) => c.json({ success: true, public: true }));
   return a;
 }
 
@@ -261,6 +264,18 @@ describe('public allowlist is method-aware for /api/forms/:id', () => {
       headers: { Authorization: 'Bearer env-key' },
     }, crossSiteEnv());
     expect(res.status).toBe(200);
+  });
+
+  test('GET /api/forms/:id/x-repliers stays public (X engagement-gate proxy)', async () => {
+    const res = await app().request('/api/forms/abc-123/x-repliers', {}, crossSiteEnv());
+    expect(res.status).toBe(200);
+    expect(await res.json() as { public: boolean }).toMatchObject({ public: true });
+  });
+
+  test('GET /api/forms/:id/x-verify stays public (X engagement-gate proxy)', async () => {
+    const res = await app().request('/api/forms/abc-123/x-verify?username=bob', {}, crossSiteEnv());
+    expect(res.status).toBe(200);
+    expect(await res.json() as { public: boolean }).toMatchObject({ public: true });
   });
 });
 
