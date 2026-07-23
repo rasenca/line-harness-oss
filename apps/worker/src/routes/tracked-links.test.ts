@@ -19,7 +19,7 @@ const dbMocks = {
 };
 vi.mock('@line-crm/db', () => dbMocks);
 
-const { trackedLinks } = await import('./tracked-links.js');
+const { trackedLinks, buildAppRedirectHtml } = await import('./tracked-links.js');
 
 const LINE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Line/14.0.0';
@@ -222,3 +222,36 @@ describe('GET /t/:linkId — short codes', () => {
     );
   });
 });
+
+// Regression: buildAppRedirectHtml embeds original_url inside an inline
+// <script> as a JS string literal. It must be encoded so a malicious
+// original_url cannot break out (stored XSS on the worker origin).
+describe('buildAppRedirectHtml — app-redirect XSS encoding', () => {
+  function elseHref(html: string): string | null {
+    const m = html.match(/\} else \{\s*window\.location\.href=("(?:[^"\\]|\\.)*");/);
+    return m ? m[1] : null;
+  }
+
+  test('a normal app-link URL round-trips through the JS string literal', () => {
+    const url = 'https://x.com/user/status/123?a=1&b=2';
+    const lit = elseHref(buildAppRedirectHtml(url));
+    expect(lit).toBeTruthy();
+    expect(JSON.parse(lit!)).toBe(url); // decodes back to the exact URL
+  });
+
+  test('a </script> in the URL cannot break out of the inline <script>', () => {
+    const url = 'https://x.com/</script><script>document.title="pwned"</script>';
+    const html = buildAppRedirectHtml(url);
+    // Only the one legitimate closing tag survives — the injected one is neutralized.
+    expect((html.match(/<\/script>/g) || []).length).toBe(1);
+    // The injected opening tag never appears literally ('<' is <-escaped).
+    expect(html).not.toContain('<script>document.title');
+    // ...yet the URL still decodes correctly for the browser.
+    expect(JSON.parse(elseHref(html)!)).toBe(url);
+  });
+
+  test('quotes and backslashes in the URL cannot break the JS string literal', () => {
+    const url = 'https://x.com/a"b\\c';
+    expect(JSON.parse(elseHref(buildAppRedirectHtml(url))!)).toBe(url);
+  });
+})

@@ -246,14 +246,35 @@ function getAndroidPackage(url: string): string | null {
   }
 }
 
-function buildAppRedirectHtml(destinationUrl: string): string {
-  const escaped = destinationUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+// URL as a complete JS string literal, safe to embed inside <script>:
+// JSON.stringify escapes quotes/backslashes/newlines; unicode-escaping '<' and
+// '/' additionally prevents a literal </script> from terminating the script
+// element (the HTML script-data state ignores JS-level quoting). Without this a
+// tracked-link original_url containing </script> is a stored XSS on the worker
+// origin (shared with the admin session cookie + LIFF).
+function jsUrlLiteral(url: string): string {
+  return JSON.stringify(url).replace(/</g, '\\u003C').replace(/\//g, '\\u002F');
+}
+
+// HTML-attribute-safe escaping for the <noscript> meta-refresh fallback URL.
+function htmlAttrEscape(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export function buildAppRedirectHtml(destinationUrl: string): string {
   const androidPackage = getAndroidPackage(destinationUrl);
   // intent://path#Intent;scheme=https;package=com.xxx;S.browser_fallback_url=https://...;end
   const intentUrl = androidPackage
     ? `intent://${destinationUrl.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=${androidPackage};S.browser_fallback_url=${encodeURIComponent(destinationUrl)};end`
     : null;
-  const intentEscaped = intentUrl ? intentUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;') : '';
+  const intentJs = intentUrl ? jsUrlLiteral(intentUrl) : '""';
+  const destJs = jsUrlLiteral(destinationUrl);
+  const noscriptUrl = htmlAttrEscape(destinationUrl);
 
   return `<!DOCTYPE html>
 <html><head>
@@ -266,14 +287,14 @@ function buildAppRedirectHtml(destinationUrl: string): string {
 <script>
 (function(){
   var isAndroid = /Android/i.test(navigator.userAgent);
-  if(isAndroid && "${intentEscaped}"){
-    window.location.href="${intentEscaped}";
+  if(isAndroid && ${intentJs}){
+    window.location.href=${intentJs};
   } else {
-    window.location.href="${escaped}";
+    window.location.href=${destJs};
   }
 })();
 </script>
-<noscript><meta http-equiv="refresh" content="0;url=${escaped}"></noscript>
+<noscript><meta http-equiv="refresh" content="0;url=${noscriptUrl}"></noscript>
 </body></html>`;
 }
 
