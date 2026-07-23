@@ -29,6 +29,13 @@ rasenca/line-harness-oss (Public)          ← 我々のフォーク = origin（
 
 - [../AGENTS.md](../AGENTS.md) — AI エージェント常設指示（毎セッション最初に読む）
 
+## reviews/（コードレビュー/監査の報告書）
+
+> ADR（意思決定）とは別レイヤーの「観測結果」。修正はフォーク安全のため別途 PR で（ADR-0002）。
+
+- [reviews/README.md](reviews/README.md) — レビュー報告書の索引
+- [reviews/2026-07-23-comprehensive-code-review.md](reviews/2026-07-23-comprehensive-code-review.md) — 全コードベース包括レビュー（91 件・🔴3/🟠14。17 次元 find→verify、総エージェント 134）
+
 ## .claude/skills/（運用手順の常設化）
 
 - [../.claude/skills/create-pr/SKILL.md](../.claude/skills/create-pr/SKILL.md) — 規約準拠かつ**フォーク安全**な PR 生成（唯一の変更経路）

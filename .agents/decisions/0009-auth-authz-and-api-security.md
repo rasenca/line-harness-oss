@@ -60,3 +60,14 @@ P7 で `apps/worker` / `apps/web` を grep 確認。
 - apps/web の `NEXT_PUBLIC_*` は実際には `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_ADMIN_API_KEY` / `NEXT_PUBLIC_MANIFEST_URL` / `NEXT_PUBLIC_UPDATE_BANNER_ENABLED` の 4 種（当初の「URL のみ」は誤り）。
 
 → [Q-008](../open-questions.md) の CORS / API キー露出は ANSWERED（CORS 限定は確定。API キーは「本体は非露出・自己更新キーは露出」と精緻化）。留保 2（認可解決順・公開エンドポイントの各信頼機構）は本 Update の scope 外として継続。
+
+## 関連: 2026-07-23 包括コードレビュー（本 ADR 領域の重大検出）
+
+全コードベース包括レビュー（[reviews/2026-07-23-comprehensive-code-review.md](../reviews/2026-07-23-comprehensive-code-review.md)）で、本 ADR が扱う認証・認可・公開エンドポイント領域に **critical/high の未是正欠陥**が検出された。要点のみ（詳細・根拠は報告書を参照）:
+
+- 🔴 **CRITICAL: 公開 allowlist がメソッド非依存**（`apps/worker/src/middleware/auth.ts:179`）。`^/api/forms/[^/]+$` が GET 公開の意図に反して PUT/DELETE も認証スキップ → 匿名でフォーム改竄・削除・提出 PII 窃取。独立 3 次元が CONFIRMED。本 ADR の「公開エンドポイントは最小限・明示 allowlist」原則に対する実装上の穴。
+- 🟠 **HIGH: 公開 GET `/api/forms/:id` が送信 Webhook 認証ヘッダ（連携シークレット）を露出**（`forms.ts:37`）。
+- 🟠 **HIGH: 公開フォーム submit/partial・`/t/:linkId` が friendId/lineUserId 詐称でクロスアカウント副作用**（本人確認 `verifyCallerLineUserId` 欠如）。
+- 🟠 **HIGH: タグ配信が `line_account_id` 未フィルタでクロステナント送信事故**（`broadcast.ts:101`）。
+
+是正はフォーク安全のため別途 `create-pr` で実施し、根拠として報告書該当節を参照する（本 ADR は決定の記録、報告書は観測結果）。
