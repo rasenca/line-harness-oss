@@ -48,6 +48,11 @@ function app() {
   a.route('/', adminAuth);
   a.get('/api/protected', (c) => c.json({ success: true, data: c.get('staff') }));
   a.post('/api/protected', (c) => c.json({ success: true, data: c.get('staff') }));
+  // Mirror the forms endpoints: GET /api/forms/:id is public (LIFF), but
+  // mutations on the same path must authenticate.
+  a.get('/api/forms/:id', (c) => c.json({ success: true, public: true }));
+  a.put('/api/forms/:id', (c) => c.json({ success: true, data: c.get('staff') }));
+  a.delete('/api/forms/:id', (c) => c.json({ success: true, data: c.get('staff') }));
   return a;
 }
 
@@ -230,6 +235,32 @@ describe('session endpoint', () => {
     const body = await res.json() as { csrfToken: string };
     expect(body.csrfToken).toBeTruthy();
     expect(cookieFor(res, 'lh_csrf') ?? '').toContain(`lh_csrf=${body.csrfToken}`);
+  });
+});
+
+describe('public allowlist is method-aware for /api/forms/:id', () => {
+  test('GET /api/forms/:id stays public (LIFF form definition)', async () => {
+    const res = await app().request('/api/forms/abc-123', {}, crossSiteEnv());
+    expect(res.status).toBe(200);
+    expect(await res.json() as { public: boolean }).toMatchObject({ public: true });
+  });
+
+  test('PUT /api/forms/:id without credentials is rejected (no auth bypass)', async () => {
+    const res = await app().request('/api/forms/abc-123', { method: 'PUT' }, crossSiteEnv());
+    expect(res.status).toBe(401);
+  });
+
+  test('DELETE /api/forms/:id without credentials is rejected (no auth bypass)', async () => {
+    const res = await app().request('/api/forms/abc-123', { method: 'DELETE' }, crossSiteEnv());
+    expect(res.status).toBe(401);
+  });
+
+  test('PUT /api/forms/:id with a valid Bearer token authenticates through', async () => {
+    const res = await app().request('/api/forms/abc-123', {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer env-key' },
+    }, crossSiteEnv());
+    expect(res.status).toBe(200);
   });
 });
 
