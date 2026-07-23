@@ -5,8 +5,35 @@ import { LineClient } from '@line-crm/line-sdk';
 
 const app = new Hono<Env>();
 
+// Constant-time comparison so a mismatching shared secret cannot be recovered
+// via response timing.
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 // Meet Harness calls this when a hearing session completes
 app.post('/api/meet-callback', async (c) => {
+  // This endpoint is on the auth allowlist (auth.ts) so an external service can
+  // reach it, but it MUST self-authenticate: without a check any anonymous
+  // caller who knows a line_user_id could push arbitrary Flex messages from the
+  // tenant's official account and overwrite the friend's metadata (#9/#11).
+  // Require a shared secret and FAIL CLOSED — if none is configured we refuse
+  // rather than fall back to accepting unauthenticated callbacks.
+  const configuredSecret = c.env.MEET_HARNESS_SECRET;
+  if (!configuredSecret) {
+    console.error('meet-callback rejected: MEET_HARNESS_SECRET is not configured');
+    return c.json({ success: false, error: 'Meet callback is not configured' }, 503);
+  }
+  const presented = c.req.header('X-LINE-HARNESS-LINK-SECRET') ?? '';
+  if (!timingSafeEqual(presented, configuredSecret)) {
+    return c.json({ success: false, error: 'Unauthorized' }, 401);
+  }
+
   const body = await c.req.json<{
     session_id: string;
     scenario_id: string;
