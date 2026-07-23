@@ -48,3 +48,21 @@
   - `README.md` は「BAN 検知 & **自動アカウント切替**」「トラフィックプールで自動振り分け」を謳い、MCP に `manage_traffic_pools` があるが、**doc（18章）に記述される移行は「受動 UUID 再マッチ」のみで、能動的なプールローテの設計は docs に見当たらない** → 実装の有無・方式をコード確認（→ [Q-007](../open-questions.md)）。
   - danger 検出時の**自動アクション（自動移行/通知）**は doc 上ベストプラクティス止まりで自動実行の有無が不明（同 Q-007）。
   - リマインダー `offset_minutes` の符号（負=前 か）に doc 内齟齬（マイグレコメント vs 本文）→ コード確認（[Q-008](../open-questions.md)）。
+
+## Update (2026-07-23) — Q-007 / Q-008(reminder) のコード裏取り
+
+P7 で `apps/worker` / `packages/db` を grep 確認。
+
+**Q-007 解消: 能動的トラフィックプールは実在する（ただし「アカウント移行」は受動 UUID 再マッチのまま。両者は別物）。**
+- `traffic_pools` は `packages/db/migrations/016_traffic_pools.sql` と `packages/db/bootstrap.sql` に定義。`pool_accounts`（`019_pool_accounts.sql`）、`entry_routes.pool_id`（`038_entry_routes_pool_and_push.sql`）、既定 `main` プール自動投入（`039_default_main_pool.sql`）。CRUD は `packages/db/src/traffic-pools.ts`、MCP は `manage_traffic_pools`。
+  - ⚠ 対立レビューで発見したドリフト: 統合スキーマ `packages/db/schema.sql` は `pool_accounts`（:723）が `traffic_pools(id)` を FK 参照（:725）するのに、**`CREATE TABLE ... traffic_pools` が schema.sql に無い**（migration/bootstrap にはある）。schema.sql 単体からの新規構築で問題になり得る upstream 側スキーマ欠落 → [Q-009](../open-questions.md)。フォーク安全のため本 PR では修正せず記録のみ。
+- **能動振り分けの実体 = 流入（友だち追加）時のアカウント選択**。`getRandomPoolAccount`（`traffic-pools.ts:186`）は `... WHERE pa.pool_id = ? AND pa.is_active = 1 ORDER BY RANDOM() LIMIT 1` で**プール内アクティブアカウントをランダム選択**。`apps/worker/src/routes/liff.ts:433-445` が `entry_route → pool_id → getRandomPoolAccount` で友だち追加先を振り分ける。
+- → README の「トラフィックプールで自動振り分け」は**実装済み（流入分散）**。一方、本 ADR 37 行目の「アカウント移行 = 受動 UUID 再マッチ」は BAN 後の**移行**の話で、こちらは受動のまま（別機構）。両立するので本文 37 行目は維持。**能動プールは「流入分散」、移行は「受動再マッチ」**と用途を分けて理解する。
+- danger 検出時の自動アクション（自動移行/通知）は引き続きコード上の自動実行を確認できず（doc のベストプラクティス止まり）。この点は未解消として残す。
+
+**Q-008(reminder) 解消: `offset_minutes` は文脈で意味が異なる（符号の doc 齟齬は「別モデルの混同」が原因）。**
+- リマインダー: `reminder_steps.offset_minutes INTEGER NOT NULL`（`packages/db/schema.sql:426`）。判定式は本 ADR 28 行目どおり `target_date + offset_minutes <= now`（本文が正）＝**負値でターゲット日時より前に発火**。
+- シナリオ: ステップの `offset_minutes` は登録起点からの**正の経過**（`apps/worker/src/routes/webhook.ts:262`「offset_days=0 + offset_minutes=0 → 即時」）。
+- → 「負=前」はリマインダーに限った話で、シナリオ側は正の経過。doc 内齟齬は 2 モデルの取り違えによるもので、本 ADR 28 行目の分離記述（別モデル）が正。
+
+→ [Q-007](../open-questions.md) は ANSWERED、[Q-008](../open-questions.md) の reminder 符号は解消。関連: ADR-0012（流入計測）。

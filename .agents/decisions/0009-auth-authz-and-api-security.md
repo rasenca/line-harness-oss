@@ -44,3 +44,19 @@
 
 - 認証は「値を返す or 早期リターン」で統一され、公開エンドポイントは各自の信頼機構に依存する。SDK/MCP は Bearer のまま（ADR-0014）。
 - **留保（要コード裏取り・重要）:** (1) doc 内に CORS の食い違い（Configuration.md=限定 vs 22-Operations.md:199=`*` MVP、Operations が stale）と `NEXT_PUBLIC_API_KEY` を書けと読める箇所（Getting-Started.md:226）がある → 実装で「限定・NEXT_PUBLIC_API_KEY 不使用」が正か確認（[Q-008](../open-questions.md)）。(2) 認可解決順・トポロジーガード・公開エンドポイントの各信頼機構は `apps/worker/src/middleware/` とルートで**コード裏取りしてから「現行の正」と断ずる**。
+
+## Update (2026-07-23) — Q-008(CORS / NEXT_PUBLIC_API_KEY) のコード裏取り（留保 1 を解消）
+
+P7 で `apps/worker` / `apps/web` を grep 確認。
+
+**CORS は許可リスト reflection（`*` ではない）＝ Configuration.md が正、22-Operations.md の `*` は stale。**
+- `app.use('*', cors({ origin: (origin, c) => resolveCorsOrigin(c.env, origin, c.req.url) }))`（`apps/worker/src/index.ts:140-141`）。直前コメント「credentialed cookie auth cannot use a wildcard origin. Reflect only [allowlisted origins]」（同:136-138）。
+- resolver 本体は `apps/worker/src/middleware/admin-auth-config.ts:216`（`resolveCorsOrigin`）で `ADMIN_ORIGIN` 許可リストに対して照合・reflect。→ 本 ADR 27 行目「CORS は admin origin に限定」は**現行の正**。
+
+**API キーの NEXT_PUBLIC 露出: CRM 本体キーは焼かない（原則どおり）が、自己更新機能に例外あり（対立レビューで判明・要注意）。**
+- CRM 本体の API キー（Bearer）は**クライアントに焼かない**。`POST /api/auth/login {apiKey}` → HttpOnly cookie のセッション認証で、バンドルに含めない（本 ADR 22・33 行目どおり・主経路は正）。変数名 `NEXT_PUBLIC_API_KEY`（その綴り）は存在しない。
+- **例外**: 自己更新 UI が `NEXT_PUBLIC_ADMIN_API_KEY` を使用（`apps/web/src/lib/update-client.ts:43-44`）。`/admin/update/*`（`x-admin-api-key` ガード）を叩く管理 API キーで、Next.js は `NEXT_PUBLIC_*` を**ビルド時にクライアントバンドルへインライン展開**する＝**このキーはバンドルに露出する**。よって本 ADR 33 行目「API キーを絶対に `NEXT_PUBLIC_*` に置かない」は CRM 本体では成立するが、自己更新機能では成立しない。
+- ただし自己更新は本番で不活性の想定（`apps/worker/wrangler.toml:36-41`: 本番は GitHub Actions デプロイ運用で self-update 用 vars/secrets を意図的に不在にし route を実行時ガードで無効化）。露出が実害化するのは self-update を有効化した場合に限る。Rasenca は本番で self-update を使わない方針（[ADR-0005](0005-deploy-operation-policy.md)）なので実運用リスクは低い。
+- apps/web の `NEXT_PUBLIC_*` は実際には `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_ADMIN_API_KEY` / `NEXT_PUBLIC_MANIFEST_URL` / `NEXT_PUBLIC_UPDATE_BANNER_ENABLED` の 4 種（当初の「URL のみ」は誤り）。
+
+→ [Q-008](../open-questions.md) の CORS / API キー露出は ANSWERED（CORS 限定は確定。API キーは「本体は非露出・自己更新キーは露出」と精緻化）。留保 2（認可解決順・公開エンドポイントの各信頼機構）は本 Update の scope 外として継続。
