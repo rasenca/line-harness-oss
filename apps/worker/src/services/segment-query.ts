@@ -92,7 +92,13 @@ export function buildSegmentQuery(condition: SegmentCondition): { sql: string; b
   }
 
   const separator = condition.operator === 'AND' ? ' AND ' : ' OR '
-  const where = clauses.length > 0 ? clauses.join(separator) : '1=1'
+  // Parenthesize the combined clauses. Callers inject an account scope by
+  // string-replacing the leading `WHERE` with `WHERE f.line_account_id = ? AND`;
+  // without these parens SQL precedence (AND binds tighter than OR) would bind
+  // the account filter to only the FIRST OR-clause, leaking other accounts'
+  // friends into the result set (#4). `WHERE f.line_account_id = ? AND (c1 OR c2)`
+  // keeps the scope applied to every clause.
+  const where = clauses.length > 0 ? `(${clauses.join(separator)})` : '1=1'
   const sql = `SELECT f.id, f.line_user_id FROM friends f WHERE ${where}`
 
   return { sql, bindings }

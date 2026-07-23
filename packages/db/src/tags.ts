@@ -100,7 +100,28 @@ import type { Friend } from './friends';
 export async function getFriendsByTag(
   db: D1Database,
   tagId: string,
+  accountId?: string | null,
 ): Promise<Friend[]> {
+  // Tags are globally unique (no line_account_id column) and can be attached to
+  // friends of any account, so an account-shared tag name (e.g. "VIP") must be
+  // scoped to the sending account — otherwise a tag broadcast reaches other
+  // accounts' friends and pollutes their messages_log attribution (#14). When
+  // no account is given (single-account / legacy callers) fall back to the tag
+  // alone, which is safe there.
+  if (accountId) {
+    const result = await db
+      .prepare(
+        `SELECT f.*
+         FROM friends f
+         INNER JOIN friend_tags ft ON ft.friend_id = f.id
+         WHERE ft.tag_id = ?
+           AND f.line_account_id = ?
+         ORDER BY f.created_at DESC`,
+      )
+      .bind(tagId, accountId)
+      .all<Friend>();
+    return result.results;
+  }
   const result = await db
     .prepare(
       `SELECT f.*

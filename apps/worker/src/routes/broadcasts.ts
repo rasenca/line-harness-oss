@@ -502,7 +502,10 @@ broadcasts.post('/api/broadcasts/:id/send', async (c) => {
     // target_type='tag' で対象が多い場合はキュー方式
     if (existing.target_type === 'tag' && existing.target_tag_id) {
       const { getFriendsByTag } = await import('@line-crm/db');
-      const friends = await getFriendsByTag(c.env.DB, existing.target_tag_id);
+      // Scope the tag preview count to the sending account (#14) so it matches
+      // what the send path will actually target.
+      const existingAccountId = (existing as unknown as Record<string, unknown>).line_account_id as string | null;
+      const friends = await getFriendsByTag(c.env.DB, existing.target_tag_id, existingAccountId);
       const followingCount = friends.filter(f => f.is_following).length;
 
       if (followingCount > 500) {
