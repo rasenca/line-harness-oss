@@ -1062,9 +1062,13 @@ events.post('/api/liff/events/:id/bookings', async (c) => {
 
   // Verify friend-limit again (identity_key ベース、cross-account 同一人物
   // を含めて再 COUNT)。並走 race の loser は DELETE してロールバック。
-  // effectiveMax = max_bookings_per_friend ?? 1 (max=null は 1 件まで)。
-  {
-    const effectiveMax = event.max_bookings_per_friend ?? 1;
+  // max=null は「制限なし」なので前段(986)と同じく再検証もスキップする。
+  // 以前は無条件ブロック + effectiveMax = max ?? 1 だったため max=null の
+  // イベントでも実効上限が 1 に化け、2 件目が INSERT 後に DELETE されて
+  // 409 duplicate_friend_booking になり、admin UI の「制限なし」契約に
+  // 反していた (#8)。max>=1 のときだけ effectiveMax=max で再検証する。
+  if (event.max_bookings_per_friend != null) {
+    const effectiveMax = event.max_bookings_per_friend;
     const cnt2 = await c.env.DB
       .prepare(
         `SELECT COUNT(*) AS c FROM event_bookings
