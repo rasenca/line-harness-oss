@@ -25,6 +25,7 @@ import {
 import { buildIntroMessage } from '../services/intro-message.js';
 import { notifyAffiliateFriendAdd } from '../services/affiliate-notifier.js';
 import { safeRedirectTarget } from '../lib/safe-redirect.js';
+import { verifyCallerLineUserId } from '../services/liff-auth.js';
 import type { Env } from '../index.js';
 
 const liffRoutes = new Hono<Env>();
@@ -1228,15 +1229,20 @@ liffRoutes.get('/api/liff/config', async (c) => {
 
 // ─── Existing LIFF endpoints ────────────────────────────────────
 
-// POST /api/liff/profile - get friend by LINE userId (public, no auth)
+// POST /api/liff/profile - get the CALLER'S OWN friend record.
+// Requires a verified LINE id_token (Authorization: Bearer <idToken>). This was
+// previously public and returned friendId / internal user_id / display_name for
+// ANY supplied lineUserId, i.e. an identity oracle usable for friendId spoofing
+// (forms /t f=) and cross-account correlation (#42). Identity now derives from
+// the verified token's sub, never from the request body.
 liffRoutes.post('/api/liff/profile', async (c) => {
   try {
-    const body = await c.req.json<{ lineUserId: string }>();
-    if (!body.lineUserId) {
-      return c.json({ success: false, error: 'lineUserId is required' }, 400);
+    const callerLineUserId = await verifyCallerLineUserId(c.req.header('Authorization'), c.env);
+    if (!callerLineUserId) {
+      return c.json({ success: false, error: 'Unauthorized' }, 401);
     }
 
-    const friend = await getFriendByLineUserId(c.env.DB, body.lineUserId);
+    const friend = await getFriendByLineUserId(c.env.DB, callerLineUserId);
     if (!friend) {
       return c.json({ success: false, error: 'Friend not found' }, 404);
     }
