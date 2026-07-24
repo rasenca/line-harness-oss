@@ -5,6 +5,7 @@ import {
   createStripeEvent,
   jstNow,
 } from '@line-crm/db';
+import { isLoopbackOrigin } from '../middleware/admin-auth-config.js';
 import type { Env } from '../index.js';
 
 const stripe = new Hono<Env>();
@@ -97,9 +98,15 @@ stripe.post('/api/integrations/stripe/webhook', async (c) => {
         return c.json({ success: false, error: 'Stripe signature verification failed' }, 401);
       }
       body = JSON.parse(rawBody) as StripeWebhookBody;
-    } else {
-      // シークレット未設定（開発環境向け）
+    } else if (isLoopbackOrigin(c.req.url)) {
+      // シークレット未設定 + localhost (wrangler dev) のみ許可する明示的な開発フォールバック。
       body = await c.req.json<StripeWebhookBody>();
+    } else {
+      // 本番でシークレット未設定 = fail-closed (#41)。無検証で受理すると、攻撃者が
+      // payment_intent.succeeded を偽装し任意の line_friend_id にスコア加算・
+      // purchased_ タグ付与・cv_fire オートメーション (送信含む) を発火させられる。
+      console.error('[stripe] STRIPE_WEBHOOK_SECRET is not set; refusing unverified webhook outside localhost');
+      return c.json({ success: false, error: 'Webhook signature verification is not configured' }, 503);
     }
 
     // 冪等性チェック
