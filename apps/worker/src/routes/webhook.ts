@@ -201,8 +201,6 @@ async function handleEvent(
       console.error('Failed to get profile for', userId, err);
     }
 
-    console.log(`[follow] profile=${profile?.displayName ?? 'null'}`);
-
     const friend = await upsertFriend(db, {
       lineUserId: userId,
       displayName: profile?.displayName ?? null,
@@ -210,7 +208,10 @@ async function handleEvent(
       statusMessage: profile?.statusMessage ?? null,
     });
 
-    console.log(`[follow] friend.id=${friend.id} friend.line_account_id=${(friend as any).line_account_id}`);
+    // Never log display_name — it is PII and Workers logs are shared across all
+    // tenants on this single D1 (#33). The internal friend UUID + whether the
+    // profile fetch resolved is enough to trace a follow.
+    console.log(`[follow] friend.id=${friend.id} friend.line_account_id=${(friend as any).line_account_id} profileResolved=${profile ? 'yes' : 'no'}`);
 
     // Set line_account_id for multi-account tracking (always update on follow)
     if (lineAccountId) {
