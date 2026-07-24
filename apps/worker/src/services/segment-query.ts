@@ -99,7 +99,15 @@ export function buildSegmentQuery(condition: SegmentCondition): { sql: string; b
   // friends into the result set (#4). `WHERE f.line_account_id = ? AND (c1 OR c2)`
   // keeps the scope applied to every clause.
   const where = clauses.length > 0 ? `(${clauses.join(separator)})` : '1=1'
-  const sql = `SELECT f.id, f.line_user_id FROM friends f WHERE ${where}`
+  // Always restrict to currently-following friends (#22). Delivering a segment
+  // to is_following=0 friends silently burns multicast quota and records
+  // `outgoing` rows in messages_log for messages LINE will never deliver
+  // (unfollowed/blocked). The tag path already filters on is_following; the
+  // segment path did not. An explicit is_following rule simply AND-combines
+  // with this default (redundant but harmless). It stays OUTSIDE the clause
+  // parens and immediately after the leading WHERE so the account-scope
+  // string-replace (#4) still targets the correct WHERE.
+  const sql = `SELECT f.id, f.line_user_id FROM friends f WHERE f.is_following = 1 AND ${where}`
 
   return { sql, bindings }
 }

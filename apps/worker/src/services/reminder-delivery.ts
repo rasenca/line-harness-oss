@@ -49,17 +49,35 @@ export async function processReminderDeliveries(
       }
 
       for (const step of fr.steps) {
-        const message = buildMessage(step.message_type, step.message_content);
-        await deliveryClient.pushMessage(friend.line_user_id, [message]);
-
-        // Mark as delivered AFTER successful send.
-        // INSERT OR IGNORE prevents duplicate records if parallel workers both sent.
-        // Prefer possible duplicate send over silent message loss on crash.
+        // Claim BEFORE sending. The `*/5 * * * *` and `0 */6 * * *` crons both
+        // fire at 00/06/12/18:00, so scheduled() runs as two concurrent
+        // invocations; with send-then-mark both would read this step as
+        // undelivered and push it (duplicate reminder, 4x/day). INSERT OR IGNORE
+        // on the UNIQUE(friend_reminder_id, reminder_step_id) row is atomic, so
+        // exactly one invocation wins the claim (meta.changes === 1) and owns
+        // the send (#20).
         const lockId = crypto.randomUUID();
-        await db
+        const claim = await db
           .prepare(`INSERT OR IGNORE INTO friend_reminder_deliveries (id, friend_reminder_id, reminder_step_id) VALUES (?, ?, ?)`)
           .bind(lockId, fr.id, step.id)
           .run();
+        if (!claim.meta.changes) {
+          // Another invocation already claimed (is sending / has sent) this step.
+          continue;
+        }
+
+        try {
+          const message = buildMessage(step.message_type, step.message_content);
+          await deliveryClient.pushMessage(friend.line_user_id, [message]);
+        } catch (err) {
+          // Release the claim so a later tick retries instead of silently
+          // dropping the reminder (keeps the prior "no silent loss" intent).
+          await db
+            .prepare(`DELETE FROM friend_reminder_deliveries WHERE id = ?`)
+            .bind(lockId)
+            .run();
+          throw err;
+        }
 
         // メッセージログに記録
         const logId = crypto.randomUUID();
