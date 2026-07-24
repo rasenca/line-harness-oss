@@ -28,13 +28,15 @@ describe('buildSegmentQuery account-scope precedence (#4)', () => {
       ],
     } as Parameters<typeof buildSegmentQuery>[0]);
 
-    // The combined predicate must be wrapped in parens.
-    expect(sql).toMatch(/WHERE \(.*\bOR\b.*\)$/);
+    // The combined predicate must be wrapped in parens, sitting after the
+    // always-on is_following default (#22).
+    expect(sql).toContain('WHERE f.is_following = 1 AND (');
+    expect(sql).toMatch(/\(.*\bOR\b.*\)$/);
 
     // Callers prepend the account scope via this exact string replace. With the
     // parens, AND binds to the whole OR-group, not just the first clause.
     const scoped = sql.replace('WHERE', 'WHERE f.line_account_id = ? AND');
-    expect(scoped).toContain('WHERE f.line_account_id = ? AND (');
+    expect(scoped).toContain('WHERE f.line_account_id = ? AND f.is_following = 1 AND (');
     // The account filter must NOT sit inside the OR group (which would let
     // later clauses match cross-account).
     expect(scoped).not.toMatch(/OR f\.line_account_id/);
@@ -48,7 +50,25 @@ describe('buildSegmentQuery account-scope precedence (#4)', () => {
         { type: 'ref_code', value: 'camp1' },
       ],
     } as Parameters<typeof buildSegmentQuery>[0]);
-    expect(sql).toMatch(/WHERE \(.*\bAND\b.*\)$/);
+    expect(sql).toMatch(/\(.*\bAND\b.*\)$/);
+  });
+});
+
+describe('buildSegmentQuery is_following default (#22)', () => {
+  test('always restricts to following friends, ahead of the clause group', () => {
+    const { sql } = buildSegmentQuery({
+      operator: 'AND',
+      rules: [{ type: 'tag_exists', value: 'tag-x' }],
+    } as Parameters<typeof buildSegmentQuery>[0]);
+    expect(sql).toContain('WHERE f.is_following = 1 AND (');
+  });
+
+  test('applies even with no rules (empty segment still excludes unfollowed)', () => {
+    const { sql } = buildSegmentQuery({
+      operator: 'AND',
+      rules: [],
+    } as Parameters<typeof buildSegmentQuery>[0]);
+    expect(sql).toContain('WHERE f.is_following = 1 AND');
   });
 });
 
