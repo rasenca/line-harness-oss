@@ -27,6 +27,25 @@ import type { Env } from '../index.js';
 
 const webhook = new Hono<Env>();
 
+export interface AutoReplyOrderable {
+  match_type: 'exact' | 'contains';
+  keyword: string;
+  created_at: string;
+}
+
+// Order auto-reply rules by specificity for first-win selection (#23). The DB
+// returns rules created_at ASC, so a broad 'contains' rule created first would
+// otherwise shadow a later, more specific 'exact' (or longer-keyword) rule.
+// Rank exact before contains, then longer keyword first, then created_at ASC.
+export function orderAutoRepliesBySpecificity<T extends AutoReplyOrderable>(rules: readonly T[]): T[] {
+  const rank = (t: 'exact' | 'contains') => (t === 'exact' ? 0 : 1);
+  return [...rules].sort((a, b) => {
+    if (rank(a.match_type) !== rank(b.match_type)) return rank(a.match_type) - rank(b.match_type);
+    if (a.keyword.length !== b.keyword.length) return b.keyword.length - a.keyword.length;
+    return a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0;
+  });
+}
+
 // LINE webhook bodies are small (events array). Cap defends against unauthenticated
 // large-payload DoS before signature verification (#104). 1 MiB leaves room for
 // bursty batched deliveries (~100 events × ~5 KB) while still well below the
@@ -618,9 +637,12 @@ async function handleEvent(
         created_at: string;
       }>();
 
+    // Pick the winner by specificity, not just insertion order (#23).
+    const candidates = orderAutoRepliesBySpecificity(autoReplies.results);
+
     let matched = false;
     let replyTokenConsumed = false;
-    for (const rule of autoReplies.results) {
+    for (const rule of candidates) {
       const isMatch =
         rule.match_type === 'exact'
           ? incomingText === rule.keyword
