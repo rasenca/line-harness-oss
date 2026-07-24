@@ -9,12 +9,12 @@ import {
   jstNow,
   computeNextDeliveryAt,
   resolveStepContent,
-  addTagToFriend,
   type DeliveryMode,
 } from '@line-crm/db';
 import type { LineClient } from '@line-crm/line-sdk';
 import type { Message } from '@line-crm/line-sdk';
 import { jitterDeliveryTime, addJitter, sleep } from './stealth.js';
+import { attachTagAndFireSideEffects } from './friend-tag-attach.js';
 
 /**
  * Replace template variables in message content.
@@ -278,9 +278,14 @@ async function processSingleDelivery(
 
   // 到達タグ付与 (advance / complete の後 = 再送が起きてもタグ付与は影響しない順序)
   // 失敗してもログに残すだけで配信フローは止めない。
+  // Route through the shared side-effect helper so a scenario-applied tag fires
+  // tag_change (automations/scoring/webhooks) and enrolls tag_added scenarios,
+  // exactly like the manual (friends.ts) and booking (friend-tag-attach.ts)
+  // paths (#24). Its INSERT OR IGNORE + changes>0 guard makes re-delivery and
+  // re-entrancy safe, so the "resend-safe" ordering note above still holds.
   if (currentStep.on_reach_tag_id) {
     try {
-      await addTagToFriend(db, friend.id, currentStep.on_reach_tag_id);
+      await attachTagAndFireSideEffects(db, friend.id, currentStep.on_reach_tag_id);
     } catch (err) {
       console.error(`[scenario] tag attach failed step=${currentStep.id}:`, err);
     }
