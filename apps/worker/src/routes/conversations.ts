@@ -8,11 +8,20 @@ conversations.get('/api/conversations', async (c) => {
   try {
     const url = new URL(c.req.url);
     const accountId = url.searchParams.get('lineAccountId') ?? undefined;
-    const minHoursSince = Number(url.searchParams.get('minHoursSince') ?? '0');
+    // Validate every numeric query param (#19). Bare Number() let `?limit=-1`
+    // through as a negative LIMIT (SQLite = unlimited) and bound NaN for
+    // `?limit=abc` / `?minHoursSince=abc`, which D1 rejects with a 500. Guard
+    // each with Number.isFinite and clamp to a sane range; hours stay float to
+    // keep sub-hour filters, limit/offset are integers.
+    const minHoursSinceRaw = Number(url.searchParams.get('minHoursSince') ?? '0');
+    const minHoursSince = Number.isFinite(minHoursSinceRaw) ? Math.max(0, minHoursSinceRaw) : 0;
     const maxHoursSinceParam = url.searchParams.get('maxHoursSince');
-    const maxHoursSince = maxHoursSinceParam !== null ? Number(maxHoursSinceParam) : null;
-    const limit = Math.min(Number(url.searchParams.get('limit') ?? '50'), 200);
-    const offset = Number(url.searchParams.get('offset') ?? '0');
+    const maxHoursSinceRaw = maxHoursSinceParam !== null ? Number(maxHoursSinceParam) : NaN;
+    const maxHoursSince = Number.isFinite(maxHoursSinceRaw) ? Math.max(0, maxHoursSinceRaw) : null;
+    const limitParam = Number.parseInt(url.searchParams.get('limit') ?? '', 10);
+    const limit = Number.isFinite(limitParam) ? Math.min(200, Math.max(1, limitParam)) : 50;
+    const offsetParam = Number.parseInt(url.searchParams.get('offset') ?? '', 10);
+    const offset = Number.isFinite(offsetParam) ? Math.max(0, offsetParam) : 0;
 
     const whereAccount = accountId ? 'AND f.line_account_id = ?' : '';
     const whereMaxHours =
@@ -133,12 +142,16 @@ conversations.get('/api/conversations', async (c) => {
     // tags lookup (friend_id -> tag names)
     const friendIds = results.map((r) => (r as { friend_id: string }).friend_id);
     const tagMap: Record<string, string[]> = {};
-    if (friendIds.length > 0) {
-      const placeholders = friendIds.map(() => '?').join(',');
+    // Chunk the IN(...) lookup: D1 caps a statement at 100 bound parameters, so
+    // a full page (limit up to 200) would otherwise overflow and 500 (#19).
+    const TAG_LOOKUP_CHUNK = 100;
+    for (let i = 0; i < friendIds.length; i += TAG_LOOKUP_CHUNK) {
+      const chunk = friendIds.slice(i, i + TAG_LOOKUP_CHUNK);
+      const placeholders = chunk.map(() => '?').join(',');
       const tagRows = await c.env.DB.prepare(
         `SELECT ft.friend_id, t.name FROM friend_tags ft JOIN tags t ON t.id = ft.tag_id WHERE ft.friend_id IN (${placeholders})`,
       )
-        .bind(...friendIds)
+        .bind(...chunk)
         .all<{ friend_id: string; name: string }>();
       for (const row of tagRows.results) {
         (tagMap[row.friend_id] ??= []).push(row.name);

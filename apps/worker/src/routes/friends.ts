@@ -82,8 +82,15 @@ function serializeTag(row: DbTag) {
 // GET /api/friends - list with pagination
 friends.get('/api/friends', async (c) => {
   try {
-    const limit = Number(c.req.query('limit') ?? '50');
-    const offset = Number(c.req.query('offset') ?? '0');
+    // Clamp pagination to a sane integer range (#18). Bare Number() let a
+    // negative `?limit=-1` through, which SQLite treats as "no limit" → a full
+    // table scan plus a getFriendTags N+1 (one D1 read per friend); `?limit=abc`
+    // bound NaN and 500'd. Match the Number.parseInt + Number.isFinite clamp
+    // idiom used in chats.ts.
+    const limitParam = Number.parseInt(c.req.query('limit') ?? '', 10);
+    const limit = Number.isFinite(limitParam) ? Math.min(200, Math.max(1, limitParam)) : 50;
+    const offsetParam = Number.parseInt(c.req.query('offset') ?? '', 10);
+    const offset = Number.isFinite(offsetParam) ? Math.max(0, offsetParam) : 0;
     const tagId = c.req.query('tagId');
     const lineAccountId = c.req.query('lineAccountId');
     const search = c.req.query('search');
